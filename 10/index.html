@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Memory Match</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body { background: radial-gradient(circle at 50% 30%, #e9fbff, #b9ecff); }
+
+    #board {
+      position: absolute;
+      display: grid;
+      perspective: 1200px;
+    }
+    .card { position: relative; cursor: pointer; }
+    .inner {
+      position: absolute; inset: 0;
+      transform-style: preserve-3d;
+      transition: transform 420ms cubic-bezier(.3,1.3,.5,1);
+    }
+    .card.up .inner { transform: rotateY(180deg); }
+    .face {
+      position: absolute; inset: 0;
+      border-radius: 14%;
+      border: max(3px, .7vmin) solid #fff;
+      box-shadow: 0 .8vmin 0 rgba(29,43,83,.18), 0 1.4vmin 2.4vmin rgba(29,43,83,.12);
+      -webkit-backface-visibility: hidden; backface-visibility: hidden;
+      display: grid; place-items: center;
+    }
+    /* Card backs: bright, with a little star pattern */
+    .back {
+      background:
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,.35) 0 7%, transparent 8%),
+        radial-gradient(circle at 75% 75%, rgba(255,255,255,.35) 0 7%, transparent 8%),
+        radial-gradient(circle at 75% 25%, rgba(255,255,255,.2) 0 5%, transparent 6%),
+        radial-gradient(circle at 25% 75%, rgba(255,255,255,.2) 0 5%, transparent 6%),
+        var(--c);
+    }
+    .back::after { content: "★"; color: rgba(255,255,255,.9); font-size: calc(var(--w) * .38); line-height: 1; }
+    .front { background: #fff; transform: rotateY(180deg); }
+    .front span { font-size: calc(var(--w) * .62); line-height: 1; }
+    .card.matched .front { box-shadow: 0 0 0 max(4px, 1vmin) #3ddc84, 0 .8vmin 0 rgba(29,43,83,.18); }
+    .card.matched .inner { animation: hop 600ms cubic-bezier(.3,1.6,.5,1); }
+    @keyframes hop { 40% { transform: rotateY(180deg) translateY(-14%) scale(1.08); } 100% { transform: rotateY(180deg); } }
+    .card.nope .inner { animation: wobble 420ms ease; }
+    @keyframes wobble { 25% { transform: rotateY(180deg) rotate(-5deg); } 75% { transform: rotateY(180deg) rotate(5deg); } }
+    .card.deal { animation: deal 420ms cubic-bezier(.3,1.4,.5,1) both; }
+    @keyframes deal { from { opacity: 0; transform: translateY(30%) scale(.6); } }
+
+    #probe { position: absolute; visibility: hidden; height: var(--nav-safe); }
+  </style>
+</head>
+<body>
+  <div id="board"></div>
+  <div id="probe"></div>
+
+  <script>
+    // Picture sets: [emoji, spoken name]
+    const SETS = [
+      [["🐶", "dog"], ["🐱", "cat"], ["🐸", "frog"], ["🐷", "pig"], ["🐵", "monkey"], ["🦁", "lion"],
+       ["🐰", "bunny"], ["🐻", "bear"], ["🐼", "panda"], ["🐔", "chicken"], ["🦊", "fox"], ["🐮", "cow"]],
+      [["🍎", "apple"], ["🍌", "banana"], ["🍇", "grapes"], ["🍓", "strawberry"], ["🍊", "orange"],
+       ["🍉", "watermelon"], ["🍐", "pear"], ["🍒", "cherries"], ["🥕", "carrot"], ["🍋", "lemon"]],
+      [["🚗", "car"], ["🚌", "bus"], ["🚂", "train"], ["✈️", "airplane"], ["🚀", "rocket"], ["🚁", "helicopter"],
+       ["🚲", "bike"], ["⛵", "sailboat"], ["🚒", "fire truck"], ["🚜", "tractor"]],
+    ];
+    const PAIRS = 6;
+    const BACKS = ["#ff5d8f", "#ff9f1c", "#9b5de5", "#2a8fff", "#00b4b4", "#3ddc84"];
+
+    const board = document.getElementById("board");
+    let cards = [], up = [], busy = false, matches = 0;
+
+    const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+    // ---------- layout: pick the grid shape that gives the biggest cards ----------
+    function layout() {
+      const W = innerWidth, H = innerHeight;
+      const pad = Math.min(W, H) * 0.04, navSafe = document.getElementById("probe").offsetHeight;
+      const top = pad, bottom = navSafe;
+      const availW = W - pad * 2, availH = H - top - bottom;
+      const gap = Math.min(W, H) * 0.025;
+      let best = null;
+      for (const [cols, rows] of [[4, 3], [3, 4], [6, 2], [2, 6]]) {
+        const w = Math.min((availW - gap * (cols - 1)) / cols, ((availH - gap * (rows - 1)) / rows) * 0.8);
+        if (!best || w > best.w) best = { cols, rows, w };
+      }
+      const { cols, rows, w } = best, h = w / 0.8;
+      board.style.gridTemplateColumns = `repeat(${cols}, ${w}px)`;
+      board.style.gridAutoRows = h + "px";
+      board.style.gap = gap + "px";
+      const bw = cols * w + (cols - 1) * gap, bh = rows * h + (rows - 1) * gap;
+      board.style.left = (W - bw) / 2 + "px";
+      board.style.top = top + (availH - bh) / 2 + "px";
+      board.style.setProperty("--w", w + "px");
+    }
+    addEventListener("resize", layout);
+
+    // ---------- a round ----------
+    function deal() {
+      const set = SETS[Math.floor(Math.random() * SETS.length)];
+      const picks = shuffle(set.slice()).slice(0, PAIRS);
+      const backColor = BACKS[Math.floor(Math.random() * BACKS.length)];
+      board.replaceChildren();
+      cards = shuffle([...picks, ...picks]).map(([emoji, name], i) => {
+        const el = document.createElement("div");
+        el.className = "card deal";
+        el.style.animationDelay = i * 45 + "ms";
+        el.innerHTML = `<div class="inner"><div class="face back" style="--c:${backColor}"></div>` +
+                       `<div class="face front"><span>${emoji}</span></div></div>`;
+        const card = { el, emoji, name, done: false };
+        el.addEventListener("pointerdown", (e) => { e.preventDefault(); flip(card); });
+        board.appendChild(el);
+        return card;
+      });
+      up = []; busy = false; matches = 0;
+      layout();
+    }
+
+    function flip(card) {
+      if (busy || card.done || up.includes(card)) return;
+      card.el.classList.add("up");
+      up.push(card);
+      Kit.tone(540 + up.length * 120, 0.07, { type: "sine", volume: 0.12 });
+      if (up.length < 2) return;
+
+      const [a, b] = up;
+      if (a.emoji === b.emoji) {
+        // A match: both stay up, hop, and the voice names it.
+        a.done = b.done = true;
+        up = [];
+        setTimeout(() => {
+          [a, b].forEach((c) => c.el.classList.add("matched"));
+          Kit.tone(660, 0.15, { type: "triangle", volume: 0.2 });
+          Kit.tone(990, 0.22, { type: "triangle", volume: 0.2, delay: 0.12 });
+          const word = a.name.charAt(0).toUpperCase() + a.name.slice(1) + "!";
+          // TODO voice actor: record each picture's name as 10/audio/<name>.mp3
+          // (dog.mp3, cat.mp3 … apple.mp3 … fire-truck.mp3); the full list is in SETS above.
+          Kit.say(word, { audio: "audio/" + a.name.replace(/ /g, "-") + ".mp3" });
+          if (++matches === PAIRS) win();
+        }, 350);
+      } else {
+        // Not a match: a gentle wobble and they turn back over. No buzzer.
+        busy = true;
+        setTimeout(() => {
+          [a, b].forEach((c) => c.el.classList.add("nope"));
+          Kit.tone(330, 0.25, { type: "sine", volume: 0.1, to: 247 });
+        }, 600);
+        setTimeout(() => {
+          [a, b].forEach((c) => c.el.classList.remove("up", "nope"));
+          up = []; busy = false;
+        }, 1150);
+      }
+    }
+
+    async function win() {
+      busy = true;
+      [523, 659, 784, 1047].forEach((f, i) => Kit.tone(f, 0.25, { type: "triangle", volume: 0.2, delay: 0.5 + i * 0.11 }));
+      const { confetti } = await Kit.use("confetti");
+      setTimeout(() => confetti({ particleCount: 150, spread: 100, origin: { x: 0.5, y: 0.5 }, disableForReducedMotion: true }), 500);
+      setTimeout(deal, 3500);
+    }
+
+    deal();
+  </script>
+</body>
+</html>

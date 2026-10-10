@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 224" width="224" height="224" role="img" aria-label="Nogglebox">
+  <title>Nogglebox</title>
+  <g transform="translate(12 12)">
+  <!-- the dark inside of the open box -->
+  <polygon points="36,92 164,92 150,54 50,54" fill="#1d2b53" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- things popping out of the box: a star, a ball and a triangle -->
+  <polygon points="66.0,30.0 72.5,45.1 88.8,46.6 76.5,57.4 80.1,73.4 66.0,65.0 51.9,73.4 55.5,57.4 43.2,46.6 59.5,45.1" fill="#ffd23f" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="134" cy="54" r="18" fill="#3ddc84" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="100,14 122,58 78,58" fill="#9b5de5" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- the open lid flaps -->
+  <polygon points="36,92 100,92 84,58 16,66" fill="#ff5d8f" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="100,92 164,92 184,66 116,58" fill="#ffc300" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- the front of the box, with a friendly face -->
+  <rect x="34" y="90" width="132" height="92" rx="14" fill="#2ec4ff" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="64" cy="148" r="8" fill="#ff9ec0"/>
+  <circle cx="136" cy="148" r="8" fill="#ff9ec0"/>
+  <ellipse cx="80" cy="126" rx="7.5" ry="9.5" fill="#1d2b53"/>
+  <ellipse cx="120" cy="126" rx="7.5" ry="9.5" fill="#1d2b53"/>
+  <circle cx="82.5" cy="122.5" r="2.6" fill="#fff"/>
+  <circle cx="122.5" cy="122.5" r="2.6" fill="#fff"/>
+  <path d="M84 150 Q100 164 116 150" fill="none" stroke="#1d2b53" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+</svg>

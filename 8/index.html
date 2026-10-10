@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Powers of Ten</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body { background: #000; cursor: pointer; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* The number, "meters", and what we're looking at */
+    #label {
+      position: absolute; top: max(10px, 2vmin);
+      left: calc(var(--nav-btn) * 0.72 + max(12px, 2.2vmin) * 2);
+      right: calc(var(--nav-btn) * 0.72 + max(12px, 2.2vmin) * 2);
+      text-align: center; pointer-events: none;
+      color: #fff; font-weight: 800; line-height: 1;
+      -webkit-text-stroke: .07em rgba(10,20,50,.85); paint-order: stroke fill;
+      text-shadow: 0 .06em .12em rgba(0,0,0,.4);
+    }
+    #num { white-space: nowrap; }
+    #num span { display: inline-block; }
+    #num .gap { margin-left: .28em; }            /* a little space every three zeros */
+    #num .new { animation: pop 450ms cubic-bezier(.3,1.8,.5,1); color: #ffd23f; }
+    @keyframes pop { from { transform: scale(0) translateY(-40%); } to { transform: scale(1); } }
+    #unit  { font-size: min(6vmin, 7vw); margin-top: .1em; }
+    /* What we're looking at: sits just above the bracket, on a dark pill so it reads on any picture */
+    #thing {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      max-width: calc(100vw - 2 * var(--nav-safe));
+      padding: .2em .7em .1em;
+      border-radius: 999px;
+      background: rgba(10, 20, 50, .72);
+      color: #fff; font-weight: 800; line-height: 1.15; text-align: center;
+      font-size: min(4.6vmin, 5.4vw);
+      pointer-events: none;
+    }
+    /* Photo credit (required by the black hole photo's CC BY license), shown only with it */
+    #credit {
+      position: absolute; right: calc(var(--nav-safe) + 1vmin); bottom: max(10px, 2vmin);
+      font-size: max(10px, 1.6vmin); color: rgba(255,255,255,.75); font-weight: 600;
+      opacity: 0; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="label" aria-live="polite">
+    <div id="num"></div>
+    <div id="unit">meter</div>
+  </div>
+  <div id="thing" aria-live="polite"></div>
+  <div id="credit">Black hole photo: Event Horizon Telescope Collaboration, CC BY 4.0</div>
+
+  <script>
+    // ---------- the ladder: one step per power of ten (meters) ----------
+    // What's on screen at each power of ten. The number is the bracket's exact width; the
+    // things only roughly match it, so labels say "about", and when the thing is much smaller
+    // than the bracket they say so ("…and the space around it"). Never imply false precision.
+    const THINGS = [
+      "about as long as a dog",                                   // 10^0  dog ≈ 1 m
+      "about as wide as a house",                                 // 10^1  house ≈ 10 m
+      "about as long as a soccer field",                          // 10^2  field ≈ 105 m
+      "about as wide as a neighborhood",                          // 10^3  ≈ 1 km
+      "about as wide as a small city",                            // 10^4  ≈ 10 km
+      "about as wide as a small state",                           // 10^5  ≈ 100 km
+      "about as wide as a country",                               // 10^6  ≈ 1,000 km
+      "about as wide as the Earth",                               // 10^7  Earth ≈ 12,700 km
+      "the Earth and the space around it",                        // 10^8  Earth ≈ 1/8 of the bracket
+      "about as wide as the Moon's path around the Earth",        // 10^9  ≈ 770,000 km
+      "the Sun and the space around it",                          // 10^10 Sun ≈ 1/7 of the bracket
+      "about as wide as Mercury's path around the Sun",           // 10^11 ≈ 1.2 × bracket
+      "about as wide as Jupiter's path around the Sun",           // 10^12 ≈ 1.6 × bracket
+      "about as wide as the paths of all the planets",            // 10^13 Neptune's ≈ 0.9 × bracket
+      "a giant black hole, far, far away",                        // 10^14 no size claim: its glowing ring ≈ 1.05 × bracket, the hole itself (event horizon) ≈ 0.38 × (it's 55 million light-years away)
+      "lots of empty space",                                      // 10^15
+      "about as far as light goes in a whole year",               // 10^16 a light-year ≈ 0.95 × bracket
+      "the Sun and its nearest star neighbors",                   // 10^17 nearest star ≈ 0.4 × bracket away
+      "lots of stars near the Sun",                               // 10^18
+      "even more stars",                                          // 10^19
+      "part of our galaxy, the Milky Way",                        // 10^20
+      "about as wide as our Milky Way galaxy",                    // 10^21 ≈ 1 × bracket
+      "our galaxy and its little neighbor galaxies",              // 10^22
+      "about as wide as our galaxy's neighborhood",               // 10^23
+      "about as wide as a giant group of galaxies",               // 10^24
+      "giant strings and clumps of galaxies",                     // 10^25 (the cosmic web; its strands come in many sizes, so no "about as wide")
+      "galaxies everywhere",                                      // 10^26
+      "about as wide as all of the universe we can see",          // 10^27 ≈ 0.9 × bracket
+    ];
+    const MAX = THINGS.length - 1; // 10^27 meters: the observable universe is about that wide
+
+    function numberWords(k) {
+      const head = ["one", "ten", "one hundred"][k % 3];
+      const scale = ["", "thousand", "million", "billion", "trillion", "quadrillion",
+                     "quintillion", "sextillion", "septillion", "octillion"][Math.floor(k / 3)];
+      return scale ? head + " " + scale : head;
+    }
+    function speakLevel(k) {
+      const line = numberWords(k) + (k === 0 ? " meter! " : " meters! ") +
+                   THINGS[k][0].toUpperCase() + THINGS[k].slice(1) + "!";
+      // TODO voice actor: record each level's line ("One meter! About as long as a dog!", "Ten meters!
+      // About as wide as a house!" … up to "One octillion meters! About as wide as all of the universe
+      // we can see!") as 8/audio/levels/0.mp3 … 27.mp3; see THINGS for every line.
+      Kit.say(line, { audio: "audio/levels/" + k + ".mp3", rate: 1 });
+    }
+
+    // ---------- canvas & camera ----------
+    const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+    const creditEl = document.getElementById("credit");
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0, base = 0; // base = pixels the current level's width takes on screen
+    function resize() {
+      W = innerWidth; H = innerHeight;
+      cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+      base = Math.min(W, H) * 0.62;
+      fitNumber();
+      // The label sits just above the bracket line (and its end ticks).
+      document.getElementById("thing").style.bottom = (H - bracketY() + 24) + "px";
+    }
+    const bracketY = () => H - Math.max(110, Math.min(W, H) * 0.2);
+    addEventListener("resize", resize);
+
+    // Where things are, in meters, with the dog at (0, 0). y points down.
+    const AU = 1.496e11;
+    const SUN = { x: AU, y: 0 };
+    // The Moon orbits the Earth on a circle tilted toward the camera, much faster than in real
+    // life. It's drawn at its true size; it looks bigger only through perspective when it swings
+    // near the camera, which sits just beyond the orbit (CAM_D from the Earth).
+    const MOON_ORBIT = 3.844e8, MOON_SIZE = 3.474e6;
+    const MOON_CAM_D = 1.042 * MOON_ORBIT; // closest pass ≈ 25× bigger, far side ≈ half size
+    const MOON_TILT = 0.035;               // so the near pass goes just below the Earth, not through it
+    const MOON_PERIOD = 8;                 // seconds per lap (the real Moon takes about 27 days)
+    function moonAt(theta) {
+      const x = MOON_ORBIT * Math.cos(theta);
+      const z = MOON_ORBIT * Math.sin(theta);       // toward the camera
+      const k = MOON_CAM_D / (MOON_CAM_D - z);      // perspective: nearer looks bigger
+      return { x: x * k, y: z * MOON_TILT * k, k, z };
+    }
+    const GC = { x: SUN.x - 2.6e20 * Math.cos(0.35), y: SUN.y + 2.6e20 * Math.sin(0.35) }; // galaxy center
+    const ANDROMEDA = { x: GC.x + 2.5e22 * Math.cos(-0.7), y: GC.y + 2.5e22 * Math.sin(-0.7) };
+    const LOCAL = { x: (GC.x + ANDROMEDA.x) / 2, y: (GC.y + ANDROMEDA.y) / 2 };
+    // The M87* black hole (from the first-ever photo of a black hole, 2019). It's really about
+    // 55 million light-years away; here it's a size comparison, so the camera visits it briefly
+    // beside the solar system and then returns to the Sun.
+    const BLACK_HOLE = { x: SUN.x - 2.6e14, y: SUN.y - 1.1e14 };
+    const BH_RING = 1.05e14; // diameter of its glowing ring, in meters
+    // A light-year, measured out from the Sun; the camera centers on its middle for that step.
+    const LIGHT_YEAR = 9.461e15;
+    const LY_MID = { x: SUN.x + LIGHT_YEAR / 2, y: SUN.y };
+
+    // The camera looks at the dog up close, then glides to the Sun, the galaxy's center,
+    // and the middle of our galaxy neighborhood as it zooms out.
+    const CAM = [[-2, { x: 0, y: 0 }], [9.15, { x: 0, y: 0 }], [10, SUN], [13.3, SUN], [14, BLACK_HOLE], [14.7, SUN], [15.4, SUN], [16, LY_MID], [16.6, SUN], [18.5, SUN], [20.3, GC], [21.8, GC], [23, LOCAL], [30, LOCAL]];
+    const smooth = (t) => t * t * (3 - 2 * t);
+    function camAt(L) {
+      for (let i = 0; i < CAM.length - 1; i++) {
+        const [l0, a] = CAM[i], [l1, b] = CAM[i + 1];
+        if (L <= l1) {
+          const t = smooth(Math.min(1, Math.max(0, (L - l0) / (l1 - l0))));
+          return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+        }
+      }
+      return CAM[CAM.length - 1][1];
+    }
+
+    let L = 0;              // current zoom level (log10 of the level width in meters)
+    let cam = { x: 0, y: 0 }, s = 1; // camera center (m) and pixels per meter, set each frame
+    const sx = (x) => W / 2 + (x - cam.x) * s;
+    const sy = (y) => H * 0.55 + (y - cam.y) * s;
+
+    // How visible something is at a given on-screen size: fades in when it's tiny and out when huge.
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const vis = (px, inA = 0.012, inB = 0.05, outA = 4, outB = 10) =>
+      clamp01((px / base - inA) / (inB - inA)) * clamp01((outB - px / base) / (outB - outA));
+    const band = (lo, hi, fade = 0.4) => clamp01((L - lo) / fade) * clamp01((hi - L) / fade); // visible between levels
+
+    // ---------- pictures ----------
+    const img = {};
+    for (const n of ["earth", "moon", "sun", "milkyway", "andromeda", "deepfield", "blackhole"]) {
+      img[n] = new Image();
+      img[n].src = "img/" + n + ".jpg";
+    }
+    // Disc diameter as a fraction of each photo's width (measured), so sizes are true to life.
+    const DISC = { earth: 0.89, sun: 0.85, moon: 1, blackhole: 0.23 }; // black hole: its ring
+
+    function rng(seed) { // small seeded random, so the town/stars look the same every time
+      return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+
+    // Each drawn thing: draw(c) works in its own unit box (-0.5…0.5 = its width), placed with
+    // a local transform. Keeping coordinates small avoids precision trouble at huge zooms.
+    function place(x, y, size, alpha, draw, blend) {
+      const px = size * s;
+      if (alpha <= 0.003 || px < 0.5) return;
+      const X = sx(x), Y = sy(y);
+      if (X + px < -W || X - px > 2 * W || Y + px < -H || Y - px > 2 * H) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      if (blend) ctx.globalCompositeOperation = blend;
+      ctx.setTransform(px * DPR, 0, 0, px * DPR, X * DPR, Y * DPR);
+      draw(ctx, px);
+      ctx.restore();
+    }
+    function photo(name, x, y, diameter, alpha, round = true, blend) {
+      const im = img[name];
+      if (!im.complete || !im.naturalWidth) return;
+      const size = diameter / (DISC[name] || 1);
+      place(x, y, size, alpha, (c) => {
+        if (round) { c.beginPath(); c.arc(0, 0, (DISC[name] || 1) / 2, 0, Math.PI * 2); c.clip(); }
+        c.drawImage(im, -0.5, -0.5, 1, 1);
+      }, blend);
+    }
+    function emoji(ch, x, y, size, alpha) {
+      // Drawn at its real pixel size (not a scaled-up tiny font, which would look blurry).
+      const px = size * s;
+      if (alpha <= 0.003 || px < 1 || px > 3000) return;
+      ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = alpha;
+      ctx.font = px + "px system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(ch, sx(x), sy(y) + px * 0.05);
+      ctx.restore();
+    }
+
+    // Soccer field, 105 × 68 m
+    function drawField(c) {
+      const h = 68 / 105;
+      for (let i = 0; i < 10; i++) { c.fillStyle = i % 2 ? "#4caf50" : "#43a047"; c.fillRect(-0.5 + i / 10, -h / 2, 0.1, h); }
+      c.strokeStyle = "#fff"; c.lineWidth = 0.006;
+      c.strokeRect(-0.48, -h / 2 + 0.02, 0.96, h - 0.04);
+      c.beginPath(); c.moveTo(0, -h / 2 + 0.02); c.lineTo(0, h / 2 - 0.02); c.stroke();
+      c.beginPath(); c.arc(0, 0, 0.087, 0, Math.PI * 2); c.stroke();
+      c.strokeRect(-0.48, -0.19, 0.157, 0.38); c.strokeRect(0.323, -0.19, 0.157, 0.38);
+    }
+
+    // Town, 1 km: blocks of little roofs and trees, with room in the middle for the field and house.
+    const town = (() => {
+      const r = rng(7), out = [];
+      const ROOFS = ["#e76f51", "#f4a261", "#e9c46a", "#d62828", "#8d6e63", "#5c6bc0", "#ef476f"];
+      for (let gx = 0; gx < 10; gx++) for (let gy = 0; gy < 10; gy++) {
+        const x0 = -0.5 + gx / 10, y0 = -0.5 + gy / 10;
+        if (gx >= 4 && gx <= 5 && gy >= 4 && gy <= 5) continue; // the field & house live here
+        if (r() < 0.12) { out.push({ park: true, x: x0 + 0.012, y: y0 + 0.012, w: 0.076, h: 0.076 }); continue; }
+        for (let k = 0; k < 4; k++) {
+          out.push({ x: x0 + 0.015 + (k % 2) * 0.037, y: y0 + 0.015 + Math.floor(k / 2) * 0.037, w: 0.03, h: 0.03, col: ROOFS[Math.floor(r() * ROOFS.length)] });
+        }
+      }
+      return out;
+    })();
+    function drawTown(c) {
+      c.fillStyle = "#9e9e9e"; // streets
+      for (let i = 0; i <= 10; i++) { c.fillRect(-0.5 + i / 10 - 0.004, -0.5, 0.008, 1); c.fillRect(-0.5, -0.5 + i / 10 - 0.004, 1, 0.008); }
+      for (const b of town) {
+        c.fillStyle = b.park ? "#2e7d32" : b.col;
+        c.fillRect(b.x, b.y, b.w, b.h);
+      }
+    }
+
+    // City, 10 km: gray blocks, parks, and a river.
+    const city = (() => {
+      const r = rng(11), out = [];
+      for (let gx = 0; gx < 20; gx++) for (let gy = 0; gy < 20; gy++) {
+        if (gx >= 9 && gx <= 10 && gy >= 9 && gy <= 10) continue; // the town
+        const g = r();
+        out.push({ x: -0.5 + gx / 20 + 0.004, y: -0.5 + gy / 20 + 0.004, w: 0.042, h: 0.042,
+                   col: g < 0.12 ? "#388e3c" : ["#b0bec5", "#90a4ae", "#cfd8dc", "#a1887f"][Math.floor(r() * 4)] });
+      }
+      return out;
+    })();
+    function drawCity(c) {
+      c.fillStyle = "#757575"; c.fillRect(-0.5, -0.5, 1, 1);
+      for (const b of city) { c.fillStyle = b.col; c.fillRect(b.x, b.y, b.w, b.h); }
+      c.strokeStyle = "#4fc3f7"; c.lineWidth = 0.03; c.lineCap = "round";
+      c.beginPath(); c.moveTo(-0.55, -0.3); c.bezierCurveTo(-0.2, -0.15, 0.1, 0.35, 0.55, 0.25); c.stroke();
+    }
+
+    // A wobbly land shape (for the state and country)
+    function blob(seed, n = 60) {
+      const r = rng(seed), pts = [], k = [r() * 6, r() * 6, r() * 6];
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const rad = 0.42 + 0.05 * Math.sin(a * 3 + k[0]) + 0.03 * Math.sin(a * 5 + k[1]) + 0.02 * Math.sin(a * 9 + k[2]);
+        pts.push([Math.cos(a) * rad, Math.sin(a) * rad]);
+      }
+      return pts;
+    }
+    function path(c, pts) { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); }
+    const stateShape = blob(21), countryShape = blob(33);
+    const stateDots = (() => { const r = rng(5), o = []; for (let i = 0; i < 140; i++) o.push([r() - 0.5, r() - 0.5, r()]); return o; })();
+    function drawState(c) {
+      path(c, stateShape); c.fillStyle = "#7cb342"; c.fill();
+      c.save(); path(c, stateShape); c.clip();
+      for (const [x, y, t] of stateDots) {             // forests and mountains
+        if (Math.hypot(x, y) < 0.07) continue;
+        if (t < 0.7) { c.fillStyle = "#33691e"; c.beginPath(); c.arc(x, y, 0.012, 0, 7); c.fill(); }
+        else { c.fillStyle = "#8d6e63"; c.beginPath(); c.moveTo(x - 0.025, y + 0.02); c.lineTo(x, y - 0.025); c.lineTo(x + 0.025, y + 0.02); c.fill();
+               c.fillStyle = "#fff"; c.beginPath(); c.moveTo(x - 0.008, y - 0.012); c.lineTo(x, y - 0.025); c.lineTo(x + 0.008, y - 0.012); c.fill(); }
+      }
+      c.fillStyle = "#29b6f6"; c.beginPath(); c.ellipse(-0.22, 0.12, 0.07, 0.04, 0.4, 0, 7); c.fill(); // a lake
+      c.restore();
+      c.setLineDash([0.015, 0.012]); c.strokeStyle = "#fff"; c.lineWidth = 0.006; path(c, stateShape); c.stroke();
+    }
+    function drawCountry(c) {
+      path(c, countryShape); c.fillStyle = "#9ccc65"; c.fill();
+      c.strokeStyle = "#29b6f6"; c.lineWidth = 0.008; c.lineCap = "round";
+      c.beginPath(); c.moveTo(0.3, -0.2); c.bezierCurveTo(0.1, -0.05, 0.05, 0.15, -0.15, 0.32); c.stroke(); // river
+      c.setLineDash([0.012, 0.01]); c.strokeStyle = "#fff"; c.lineWidth = 0.004;
+      c.save(); c.scale(0.1, 0.1); path(c, stateShape); c.restore(); c.stroke(); // our state
+      c.setLineDash([]); c.strokeStyle = "rgba(255,255,255,.8)"; c.lineWidth = 0.005; path(c, countryShape); c.stroke();
+    }
+
+    // Planets (orbit radius in m, dot color)
+    const PLANETS = [[5.79e10, "#b0a090", 2.1], [1.082e11, "#e8c07a", 4.4], [AU, "#4fa3ff", Math.PI], [2.279e11, "#d9603b", 0.9],
+                     [7.785e11, "#d8b48a", 5.5], [1.434e12, "#e9d29a", 3.6], [2.871e12, "#9fe3ea", 1.3], [4.495e12, "#4f6fe0", 2.7]];
+
+    // Stars around the Sun, and galaxies far beyond (positions in m), generated once.
+    // Roughly as crowded as the real sky: only about a dozen stars within 10 light-years
+    // (≈1e17 m), many more farther out. Each shell is [from, to (log10 m), how many to draw];
+    // the far shells are only a sample of their millions of stars.
+    const STAR_SHELLS = [[16.6, 17, 10], [17, 18, 250], [18, 19, 600], [19, 20.2, 700]];
+    const stars = (() => {
+      const r = rng(99), o = [{ x: SUN.x + 4.13e16 * Math.cos(3.6), y: SUN.y + 4.13e16 * Math.sin(3.6), b: 1, near: true }];
+      for (const [lo, hi, n] of STAR_SHELLS) {
+        const r0 = Math.pow(10, lo), r1 = Math.pow(10, hi);
+        for (let i = 0; i < n; i++) {
+          const d = Math.sqrt(r0 * r0 + r() * (r1 * r1 - r0 * r0)), a = r() * Math.PI * 2; // spread evenly over the area
+          o.push({ x: SUN.x + d * Math.cos(a), y: SUN.y + d * Math.sin(a), b: 0.3 + r() * 0.7, tw: r() * 6 });
+        }
+      }
+      return o;
+    })();
+    const galaxies = (() => {
+      const r = rng(3), o = [];
+      for (let i = 0; i < 1400; i++) {
+        const d = Math.pow(10, 22.6 + r() * 4.1), a = r() * Math.PI * 2;
+        o.push({ x: LOCAL.x + d * Math.cos(a), y: LOCAL.y + d * Math.sin(a), size: Math.pow(10, 20.3 + r() * 1.2),
+                 rot: r() * 3, flat: 0.3 + r() * 0.6, hue: [210, 30, 50, 280][Math.floor(r() * 4)] });
+      }
+      return o;
+    })();
+    const DWARFS = [ // a few small neighbor galaxies: [x, y, size]
+      [GC.x + 1.6e21, GC.y + 0.4e21, 1.4e20], [GC.x + 1.8e21, GC.y + 0.9e21, 7e19], // Large & Small Magellanic Clouds
+      [ANDROMEDA.x + 6.5e21, ANDROMEDA.y + 3.9e21, 6e20],          // Triangulum, ≈ 800,000 light-years from Andromeda
+    ];
+
+    // Soft glowing dots are pre-drawn once per color and stamped, which is far faster than
+    // building a gradient for each of hundreds of stars every frame.
+    const sprites = new Map();
+    function sprite(color) {
+      if (sprites.has(color)) return sprites.get(color);
+      const c = document.createElement("canvas"); c.width = c.height = 64;
+      const x = c.getContext("2d"), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, color); g.addColorStop(0.25, color); g.addColorStop(1, "rgba(0,0,0,0)");
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+      sprites.set(color, c);
+      return c;
+    }
+    function glowDot(X, Y, r, color, alpha) {
+      if (alpha <= 0.003 || r <= 0) return;
+      ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = Math.min(1, alpha);
+      ctx.drawImage(sprite(color), X - r, Y - r, r * 2, r * 2);
+      ctx.restore();
+    }
+    function ring(x, y, radius, alpha, color = "rgba(255,255,255,.55)", dash = [6, 6]) {
+      const R = radius * s;
+      if (alpha <= 0 || R < 2 || R > 40 * W) return;
+      ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash(dash);
+      ctx.beginPath(); ctx.arc(sx(x), sy(y), R, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+
+    // ---------- one frame ----------
+    let clock = 0;
+    function render() {
+      cam = camAt(L);
+      s = base / Math.pow(10, L);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      // Background: grass up close, sea for the maps, then black space.
+      const sea = clamp01((L - 4.6) / 0.8), space = clamp01((L - 6.4) / 0.4);
+      const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+      const bg = mix(mix([124, 179, 66], [33, 118, 196], sea), [3, 4, 14], space);
+      ctx.fillStyle = `rgb(${bg})`; ctx.fillRect(0, 0, W, H);
+
+      // Background twinkly stars in space (screen-fixed, for atmosphere)
+      if (space > 0) {
+        const r = rng(42);
+        ctx.fillStyle = "#fff";
+        for (let i = 0; i < 160; i++) {
+          const x = r() * W, y = r() * H, tw = 0.5 + 0.5 * Math.sin(clock * 2 + i);
+          ctx.globalAlpha = space * (0.15 + 0.35 * tw) * r();
+          ctx.fillRect(x, y, 1.3, 1.3);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Close up: the ground
+      place(0, 0, 1e6, vis(1e6 * s, 0.012, 0.05, 3, 8), drawCountry);
+      place(0, 0, 1e5, vis(1e5 * s, 0.012, 0.05, 6, 14), drawState);
+      place(0, 0, 1e4, vis(1e4 * s, 0.02, 0.06, 8, 20), drawCity);
+      place(0, 50, 1000, vis(1000 * s, 0.02, 0.06, 10, 25), drawTown);
+      place(0, 45, 105, vis(105 * s, 0.02, 0.06, 12, 30), drawField);
+      emoji("🏠", 0, -4.2, 10, vis(10 * s, 0.02, 0.06, 3, 6));
+      emoji("🐕", 0, 0, 1, vis(1 * s, 0.01, 0.04, 60, 200));
+
+      // Earth and Moon
+      // The Moon's path, drawn with the same perspective as the Moon itself
+      const moonA = band(7.8, 9.8);
+      if (moonA > 0) {
+        ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = moonA * 0.6;
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        for (let i = 0; i <= 240; i++) {
+          const p = moonAt((i / 240) * Math.PI * 2);
+          i ? ctx.lineTo(sx(p.x), sy(p.y)) : ctx.moveTo(sx(p.x), sy(p.y));
+        }
+        ctx.stroke(); ctx.restore();
+      }
+      const moon = moonAt((clock / MOON_PERIOD) * Math.PI * 2);
+      const drawMoon = () => photo("moon", moon.x, moon.y, MOON_SIZE * moon.k, moonA);
+      if (moon.z < 0) drawMoon();   // far side: behind the Earth
+      photo("earth", 0, 0, 1.2742e7, vis(1.2742e7 * s, 0.006, 0.02, 4, 9));
+      if (moon.z >= 0) drawMoon();  // near side: in front of the Earth
+
+      // The Sun and planets
+      const sunPx = 1.392e9 * s;
+      if (band(9.4, 17.5, 0.5) > 0) glowDot(sx(SUN.x), sy(SUN.y), Math.max(sunPx * 1.6, 10), "rgba(255,200,80,.9)", band(9.4, 17.5, 0.5));
+      photo("sun", SUN.x, SUN.y, 1.392e9, vis(sunPx, 0.004, 0.015, 4, 9));
+      const orbitsA = band(10.3, 15.2);
+      PLANETS.forEach(([r, col, ang]) => {
+        ring(SUN.x, SUN.y, r, orbitsA * 0.8, "rgba(255,255,255,.35)", []);
+        if (orbitsA > 0 && r * s > 3) glowDot(sx(SUN.x + r * Math.cos(ang)), sy(SUN.y + r * Math.sin(ang)), 4, col, orbitsA);
+      });
+      // The black hole (size comparison), only around its step
+      const bhA = band(13.45, 14.55, 0.35);
+      photo("blackhole", BLACK_HOLE.x, BLACK_HOLE.y, BH_RING, bhA, false, "screen");
+      creditEl.style.opacity = bhA;
+
+      // A light-year: a dashed line from the Sun one light-year outward, with a dot of light
+      // leaving the Sun and travelling along it (much faster than real: it really takes a year)
+      const lyA = band(15.3, 17.2);
+      if (lyA > 0) {
+        ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = lyA;
+        const X0 = sx(SUN.x), Y0 = sy(SUN.y), X1 = sx(SUN.x + LIGHT_YEAR);
+        ctx.strokeStyle = "rgba(255,230,120,.8)"; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X1, Y0); ctx.stroke(); ctx.restore();
+        glowDot(X0 + (X1 - X0) * ((clock * 0.35) % 1), Y0, 9, "#fff6c0", lyA);
+      }
+
+      // Stars
+      const starA = band(15.8, 20.6, 0.6);
+      if (starA > 0) for (const st of stars) {
+        const X = sx(st.x), Y = sy(st.y);
+        if (X < -20 || X > W + 20 || Y < -20 || Y > H + 20) continue;
+        const tw = 0.7 + 0.3 * Math.sin(clock * 3 + (st.tw || 0));
+        if (st.near) glowDot(X, Y, 14, "#fff0c8", starA * band(16.4, 18.6));
+        else glowDot(X, Y, 1.5 + st.b * 2.5, "#ffffff", starA * st.b * tw);
+      }
+
+      // Galaxies
+      photo("milkyway", GC.x, GC.y, 1.0e21, vis(1.0e21 * s, 0.01, 0.04, 6, 20) * clamp01((L - 19.4) / 0.8), false, "screen");
+      photo("andromeda", ANDROMEDA.x, ANDROMEDA.y, 2.6e21, vis(2.6e21 * s, 0.01, 0.04, 2.5, 7), false, "screen");
+      for (const [x, y, size] of DWARFS) {
+        const a = band(20.8, 24);
+        if (a > 0) glowDot(sx(x), sy(y), Math.max(3, size * s), "rgba(200,210,255,.8)", a);
+      }
+      const galA = band(23.2, 30, 0.8);
+      if (galA > 0) for (const g of galaxies) {
+        const X = sx(g.x), Y = sy(g.y);
+        if (X < -30 || X > W + 30 || Y < -30 || Y > H + 30) continue;
+        const r = Math.max(1.6, g.size * s) * 2;
+        ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, X * DPR, Y * DPR); ctx.rotate(g.rot); ctx.scale(1, g.flat);
+        ctx.globalAlpha = galA * 0.85;
+        ctx.drawImage(sprite(`hsl(${g.hue},75%,82%)`), -r, -r, r * 2, r * 2);
+        ctx.restore();
+      }
+
+      // The whole observable universe: a glowing bubble full of galaxies
+      const uniR = 4.4e26, uniA = band(25.2, 40);
+      if (uniA > 0) {
+        photo("deepfield", LOCAL.x, LOCAL.y, uniR * 2, uniA * 0.55, true, "screen");
+        ring(LOCAL.x, LOCAL.y, uniR, uniA, "rgba(160,200,255,.9)", []);
+      }
+
+      // "You are here": a little pulsing pin where the dog is, so you never lose it
+      const pinA = band(1.2, 9.6, 0.4);
+      if (pinA > 0) {
+        const X = sx(0), Y = sy(0), p = 1 + 0.15 * Math.sin(clock * 5);
+        ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = pinA;
+        ctx.fillStyle = "#ff3b5c"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(X, Y, 7 * p, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+
+      // The bracket: shows exactly how wide the number is, right now
+      const bw = Math.pow(10, target) * s, by = bracketY();
+      if (bw > 4 && bw < W * 3) {
+        ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        ctx.lineCap = "round";
+        for (const [col, lw] of [["rgba(10,20,50,.7)", 9], ["#fff", 4]]) {
+          ctx.strokeStyle = col; ctx.lineWidth = lw;
+          ctx.beginPath();
+          ctx.moveTo(W / 2 - bw / 2, by - 14); ctx.lineTo(W / 2 - bw / 2, by); ctx.lineTo(W / 2 + bw / 2, by); ctx.lineTo(W / 2 + bw / 2, by - 14);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    // ---------- the number ----------
+    const numEl = document.getElementById("num");
+    function showNumber(k, popNew) {
+      numEl.replaceChildren();
+      const digits = "1" + "0".repeat(k);
+      [...digits].forEach((d, i) => {
+        const span = document.createElement("span");
+        span.textContent = d;
+        const fromRight = digits.length - 1 - i;
+        if (i > 0 && (fromRight + 1) % 3 === 0) span.className = "gap";
+        if (popNew && i === digits.length - 1 && k > 0) span.classList.add("new");
+        numEl.appendChild(span);
+      });
+      document.getElementById("unit").textContent = k === 0 ? "meter" : "meters";
+      document.getElementById("thing").textContent = THINGS[k];
+      fitNumber();
+    }
+    function fitNumber() {
+      const k = Math.max(0, numEl.childElementCount - 1);
+      const avail = W - 2 * (Math.min(W, H) * 0.12 * 0.72 + Math.max(12, Math.min(W, H) * 0.022) * 2);
+      const size = Math.min(Math.min(W, H) * 0.16, avail / ((k + 1) * 0.62 + Math.floor(k / 3) * 0.28));
+      numEl.style.fontSize = size + "px";
+    }
+
+    // ---------- sounds ----------
+    function whoosh(up, dur = 1.1) {
+      const ac = Kit.audio();
+      if (!ac) return;
+      const t = ac.currentTime;
+      const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2;
+      bp.frequency.setValueAtTime(up ? 300 : 2400, t);
+      bp.frequency.exponentialRampToValueAtTime(up ? 2400 : 300, t + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + dur * 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(bp).connect(g).connect(ac.destination);
+      src.start(t);
+    }
+
+    // ---------- tapping ----------
+    let target = 0, anim = null, rewinding = false;
+    const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const easeOutBack = (t) => { const c1 = 2.2, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+
+    function zoomTo(k, ms, ease) {
+      anim = { from: L, to: k, t0: performance.now(), ms, ease };
+    }
+
+    function rewind() {
+      // Zoom all the way back in, one power at a time: each step dips in past the next
+      // level and bounces back out, so you see every zero go.
+      rewinding = true;
+      whoosh(false, MAX * 0.18 + 0.2);
+      let k = MAX;
+      const step = () => {
+        k--;
+        target = k;
+        showNumber(k, false);
+        Kit.tone(220 + k * 28, 0.08, { type: "triangle", volume: 0.12 });
+        zoomTo(k, 180, easeOutBack);
+        if (k > 0) setTimeout(step, 180);
+        else setTimeout(() => { rewinding = false; speakLevel(0); }, 260);
+      };
+      step();
+    }
+
+    document.body.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (rewinding) return;
+      if (target >= MAX) return rewind();
+      target++;
+      showNumber(target, true);
+      Kit.tone(660 + target * 25, 0.12, { type: "triangle", volume: 0.15 });
+      whoosh(true);
+      zoomTo(target, 1100, easeInOut);
+      speakLevel(target);
+    });
+
+    function frame(now) {
+      clock = now / 1000;
+      if (anim) {
+        const t = Math.min(1, (now - anim.t0) / anim.ms);
+        L = anim.from + (anim.to - anim.from) * anim.ease(t);
+        if (t >= 1) { L = anim.to; anim = null; }
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    resize();
+    showNumber(0, false);
+    speakLevel(0);
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

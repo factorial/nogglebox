@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Falling Numbers</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.55) 0 6vmin, transparent 6.2vmin),
+        radial-gradient(circle at 78% 30%, rgba(255,255,255,.45) 0 9vmin, transparent 9.2vmin),
+        linear-gradient(#ffe9f3, #e3f4ff);
+    }
+    .num {
+      position: absolute; left: 0; top: 0;
+      font-weight: 800;
+      font-size: min(19vmin, 16vw);
+      line-height: 1;
+      width: .72em; text-align: center;
+      cursor: pointer;
+      -webkit-text-stroke: .05em #fff;
+      paint-order: stroke fill;
+      text-shadow: 0 .05em 0 rgba(29,43,83,.18);
+      will-change: transform;
+    }
+    .num > span { display: inline-block; transform-origin: 50% 90%; }
+    .num.toot > span { animation: toot 380ms cubic-bezier(.3,1.6,.5,1); }
+    @keyframes toot {
+      0%   { transform: scale(1, 1); }
+      30%  { transform: scale(1.25, .78); }
+      65%  { transform: scale(.9, 1.15); }
+      100% { transform: scale(1, 1); }
+    }
+    .count {
+      position: absolute; left: 0; top: 0;
+      font-weight: 800;
+      font-size: min(9vmin, 8vw);
+      color: var(--ink);
+      pointer-events: none;
+      animation: count-up 900ms ease-out forwards;
+    }
+    @keyframes count-up {
+      0%   { opacity: 0; transform: translate(-50%, 0) scale(.4); }
+      20%  { opacity: 1; transform: translate(-50%, -40%) scale(1.15); }
+      100% { opacity: 0; transform: translate(-50%, -160%) scale(1); }
+    }
+    .puff {
+      position: absolute; left: 0; top: 0;
+      width: 5vmin; height: 5vmin;
+      border-radius: 50%;
+      background: #c8e6a0;
+      box-shadow: 2.4vmin -1vmin 0 -.6vmin #d7efb6, -2.2vmin -.6vmin 0 -.8vmin #bfe08f;
+      pointer-events: none;
+      animation: puff 800ms ease-out forwards;
+    }
+    @keyframes puff {
+      from { opacity: .9; transform: translate(-50%, -50%) scale(.3); }
+      to   { opacity: 0;  transform: translate(calc(-50% + var(--dx)), calc(-50% + 6vmin)) scale(1.8); }
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const COLORS = ["#ff5d8f", "#ff9f1c", "#ffc300", "#3ddc84", "#2ec4ff", "#2a8fff", "#9b5de5", "#f15bb5", "#ff4d4d"];
+    const FART_GAP = 0.52; // seconds between toots
+
+    // ---------- fart synth ----------
+    let noiseBuf = null;
+    function noise(ac) {
+      if (noiseBuf) return noiseBuf;
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return noiseBuf;
+    }
+
+    function fart(when) {
+      const ac = Kit.audio();
+      if (!ac) return;
+      const t = ac.currentTime + when;
+      const kind = Math.random();
+      const dur = kind < 0.25 ? 0.18 + Math.random() * 0.1     // short "pft"
+                : kind < 0.8  ? 0.35 + Math.random() * 0.25    // classic
+                :               0.45 + Math.random() * 0.15;   // squeaky
+      const f0 = kind >= 0.8 ? 150 + Math.random() * 60 : 70 + Math.random() * 45;
+
+      // Buzzy low tone with a wobbly pitch
+      const osc = ac.createOscillator();
+      osc.type = "sawtooth";
+      const pitch = new Float32Array(32);
+      for (let i = 0; i < pitch.length; i++) {
+        const p = i / (pitch.length - 1);
+        const bend = kind >= 0.8 ? 1 + p * 0.6 : 1 - p * 0.35;
+        pitch[i] = f0 * bend * (0.9 + Math.random() * 0.2);
+      }
+      osc.frequency.setValueCurveAtTime(pitch, t, dur);
+
+      // Flappy, uneven loudness
+      const amp = ac.createGain();
+      const env = new Float32Array(48);
+      for (let i = 0; i < env.length; i++) {
+        const p = i / (env.length - 1);
+        const shape = Math.min(1, p * 12) * Math.pow(1 - p, 0.6);
+        env[i] = shape * (0.45 + Math.random() * 0.55);
+      }
+      env[env.length - 1] = 0;
+      amp.gain.value = 0;
+      amp.gain.setValueCurveAtTime(env, t, dur);
+
+      const shaper = ac.createWaveShaper();
+      const curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 3); }
+      shaper.curve = curve;
+
+      const lp = ac.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 520 + Math.random() * 300;
+      lp.Q.value = 4;
+
+      // Breathy air on top
+      const air = ac.createBufferSource();
+      air.buffer = noise(ac);
+      const bp = ac.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 260;
+      bp.Q.value = 1.2;
+      const airGain = ac.createGain();
+      airGain.gain.value = 0;
+      airGain.gain.setValueCurveAtTime(env.map((v) => v * 0.5), t, dur);
+
+      const out = ac.createGain();
+      out.gain.value = 0.55;
+
+      osc.connect(shaper).connect(lp).connect(amp).connect(out);
+      air.connect(bp).connect(airGain).connect(out);
+      out.connect(ac.destination);
+      osc.start(t); osc.stop(t + dur + 0.05);
+      air.start(t, Math.random() * 0.5); air.stop(t + dur + 0.05);
+    }
+
+    // ---------- falling numbers ----------
+    const nums = [];
+    let W = innerWidth, H = innerHeight;
+    addEventListener("resize", () => { W = innerWidth; H = innerHeight; });
+
+    function size() { return Math.min(Math.min(W, H) * 0.19, W * 0.16); }
+
+    function pickX(self) {
+      // Choose the lane farthest from any number near the top, so they don't stack.
+      const s = size(), lanes = Math.max(3, Math.floor(W / (s * 0.85)));
+      const laneW = W / lanes;
+      let best = 0, bestScore = -1;
+      for (let i = 0; i < lanes; i++) {
+        const cx = laneW * (i + 0.5);
+        let score = Infinity;
+        for (const n of nums) {
+          if (n === self || n.y > H * 0.45) continue;
+          score = Math.min(score, Math.abs(n.x + s * 0.36 - cx) + Math.max(0, n.y));
+        }
+        score += Math.random() * laneW * 0.5;
+        if (score > bestScore) { bestScore = score; best = cx; }
+      }
+      return best - s * 0.36;
+    }
+
+    function respawn(n, y) {
+      n.x = pickX(n);
+      n.y = y;
+      n.speed = (0.07 + Math.random() * 0.06); // fraction of screen height per second
+      n.rot = (Math.random() - 0.5) * 30;
+      n.spin = (Math.random() - 0.5) * 30;
+    }
+
+    for (let v = 1; v <= 9; v++) {
+      const el = document.createElement("div");
+      el.className = "num";
+      el.innerHTML = "<span>" + v + "</span>";
+      el.style.color = COLORS[v - 1];
+      document.body.appendChild(el);
+      const n = { v, el, busy: false };
+      nums.push(n);
+      respawn(n, -size() - Math.random() * H * 0.9 + H * 0.55);
+      el.addEventListener("pointerdown", (e) => { e.preventDefault(); tapped(n); });
+    }
+
+    function tapped(n) {
+      if (n.busy) return;
+      n.busy = true;
+      const s = size();
+      for (let i = 0; i < n.v; i++) {
+        fart(i * FART_GAP);
+        setTimeout(() => {
+          n.el.classList.remove("toot"); void n.el.offsetWidth; n.el.classList.add("toot");
+          const cx = n.x + s * 0.36, base = n.y + s * 0.95;
+          const c = document.createElement("div");
+          c.className = "count";
+          c.textContent = i + 1;
+          c.style.left = cx + "px";
+          c.style.top = n.y - s * 0.35 + "px";
+          c.style.color = n.el.style.color;
+          const p = document.createElement("div");
+          p.className = "puff";
+          p.style.left = cx + "px";
+          p.style.top = base + "px";
+          p.style.setProperty("--dx", (Math.random() - 0.5) * 8 + "vmin");
+          document.body.append(c, p);
+          setTimeout(() => { c.remove(); p.remove(); }, 950);
+        }, i * FART_GAP * 1000);
+      }
+      setTimeout(() => { n.busy = false; }, n.v * FART_GAP * 1000 + 250);
+    }
+
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      for (const n of nums) {
+        if (!n.busy) {
+          n.y += n.speed * H * dt;
+          n.rot += n.spin * dt;
+          if (n.y > H + 10) respawn(n, -size() * 1.1);
+        }
+        n.el.style.transform = `translate(${n.x}px, ${n.y}px) rotate(${n.rot}deg)`;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

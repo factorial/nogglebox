@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Shape Sides</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 40%, #fff8d6, #ffe08a);
+      display: flex; align-items: center; justify-content: center;
+      gap: 4vmin;
+      padding: 3vmin 3vmin var(--nav-safe);
+      cursor: pointer;
+    }
+    @media (orientation: landscape) { body { flex-direction: row; padding: 3vmin var(--nav-safe) var(--nav-safe); } }
+    @media (orientation: portrait)  { body { flex-direction: column; } }
+
+    #shape { width: min(62vmin, 70vw); height: min(62vmin, 70vw); overflow: visible; flex: none; }
+    #shape .body { transform-origin: 0 0; }
+    #shape.pop .body { animation: pop 450ms cubic-bezier(.3,1.6,.5,1); }
+    @keyframes pop { from { transform: scale(.6) rotate(-20deg); } to { transform: scale(1) rotate(0); } }
+
+    .side {
+      fill: none;
+      stroke-width: 9;
+      stroke-linecap: round;
+      stroke-dasharray: 1 1;
+      stroke-dashoffset: 1;
+      transition: stroke-dashoffset 260ms ease-out;
+    }
+    .side.on { stroke-dashoffset: 0; }
+
+    .badge { opacity: 0; transform: scale(.2); transform-box: fill-box; transform-origin: center; transition: opacity 200ms, transform 300ms cubic-bezier(.3,1.8,.5,1); }
+    .badge.on { opacity: 1; transform: scale(1); }
+    .badge text { font-family: var(--font); font-weight: 800; font-size: 15px; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+
+    .label { text-align: center; line-height: .95; flex: none; min-width: 34vmin; }
+    .count { font-weight: 800; font-size: min(14vmin, 13vw); color: var(--ink); white-space: nowrap; }
+    .count b { font-weight: 800; }
+    .name { font-weight: 800; font-size: min(10vmin, 10vw); color: var(--pink); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <svg id="shape" viewBox="-115 -115 230 230" aria-hidden="true">
+    <g class="body">
+      <path id="fill"></path>
+      <g id="sides"></g>
+      <g id="badges"></g>
+    </g>
+  </svg>
+  <div class="label" aria-live="polite">
+    <div class="count"><b id="n">1</b> <span id="word">side</span></div>
+    <div class="name" id="name">circle</div>
+  </div>
+
+  <script>
+    const NAMES = ["", "circle", "half circle", "triangle", "square", "pentagon", "hexagon", "heptagon", "octagon"];
+    const COLORS = ["#ff4d4d", "#2a8fff", "#3ddc84", "#ff9f1c", "#9b5de5", "#f15bb5", "#00b4b4", "#ffc300"];
+    const FILLS = ["", "#ffd6d6", "#d6e8ff", "#d8f8e6", "#ffe8cc", "#ece0fb", "#fde0f0", "#d0f4f4", "#fff2bf"];
+    const R = 90;
+    const SIDE_MS = 280;
+    const svg = document.getElementById("shape");
+    const NS = "http://www.w3.org/2000/svg";
+
+    // Returns { sides: [path d...], fill: d, badges: [{x,y}] } centered on the origin.
+    function geometry(n) {
+      if (n === 1) {
+        const d = `M 0 ${-R} A ${R} ${R} 0 1 1 -0.01 ${-R}`;
+        return { sides: [d], fill: d + " Z", badges: [{ x: 0, y: -R - 20 }] };
+      }
+      if (n === 2) {
+        const yb = R / 2; // flat side at the bottom; whole thing vertically centered
+        const arc = `M ${-R} ${yb} A ${R} ${R} 0 0 1 ${R} ${yb}`;
+        const line = `M ${R} ${yb} L ${-R} ${yb}`;
+        return {
+          sides: [arc, line],
+          fill: arc + " Z",
+          badges: [{ x: 0, y: yb - R - 20 }, { x: 0, y: yb + 20 }],
+        };
+      }
+      // Regular polygon with a flat bottom edge
+      const pts = [];
+      for (let k = 0; k < n; k++) {
+        const a = Math.PI / 2 + Math.PI / n + (2 * Math.PI * k) / n;
+        pts.push({ x: R * Math.cos(a), y: R * Math.sin(a) });
+      }
+      const ys = pts.map((p) => p.y);
+      const dy = -(Math.min(...ys) + Math.max(...ys)) / 2;
+      pts.forEach((p) => { p.y += dy; });
+      const sides = [], badges = [];
+      for (let k = 0; k < n; k++) {
+        const a = pts[k], b = pts[(k + 1) % n];
+        sides.push(`M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        const len = Math.hypot(mx, my - dy) || 1;
+        badges.push({ x: mx + ((mx) / len) * 20, y: my + ((my - dy) / len) * 20 });
+      }
+      return { sides, fill: "M " + pts.map((p) => `${p.x} ${p.y}`).join(" L ") + " Z", badges };
+    }
+
+    let n = 1, dir = 1, timers = [];
+
+    function show(count, withSound) {
+      timers.forEach(clearTimeout);
+      timers = [];
+      const g = geometry(count);
+      document.getElementById("fill").setAttribute("d", g.fill);
+      document.getElementById("fill").setAttribute("fill", FILLS[count]);
+      const sides = document.getElementById("sides");
+      const badges = document.getElementById("badges");
+      sides.replaceChildren();
+      badges.replaceChildren();
+
+      g.sides.forEach((d, i) => {
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", d);
+        p.setAttribute("pathLength", "1");
+        p.setAttribute("class", "side");
+        p.setAttribute("stroke", COLORS[i]);
+        sides.appendChild(p);
+
+        // Outer group positions the badge; inner group carries the CSS pop-in scale.
+        const b = document.createElementNS(NS, "g");
+        b.setAttribute("transform", `translate(${g.badges[i].x} ${g.badges[i].y})`);
+        const inner = document.createElementNS(NS, "g");
+        inner.setAttribute("class", "badge");
+        inner.innerHTML = `<circle r="13" fill="${COLORS[i]}" stroke="#fff" stroke-width="3"/><text>${i + 1}</text>`;
+        b.appendChild(inner);
+        badges.appendChild(b);
+
+        timers.push(setTimeout(() => {
+          p.classList.add("on");
+          inner.classList.add("on");
+          if (withSound) Kit.tone(392 * Math.pow(2, i / 7), 0.18, { type: "triangle", volume: 0.2 });
+        }, 120 + i * SIDE_MS));
+      });
+
+      document.getElementById("n").textContent = count;
+      document.getElementById("n").style.color = COLORS[count - 1];
+      document.getElementById("word").textContent = count === 1 ? "side" : "sides";
+      document.getElementById("name").textContent = NAMES[count];
+
+      svg.classList.remove("pop"); void svg.getBoundingClientRect(); svg.classList.add("pop");
+
+      // Say the shape's name once its sides have drawn in, including "circle" when the page opens.
+      timers.push(setTimeout(() => {
+        // TODO voice actor: record each shape name as 3/audio/<name>.mp3
+        // (circle.mp3, half-circle.mp3, triangle.mp3, square.mp3 … octagon.mp3)
+        Kit.say(NAMES[count] + "!", { audio: "audio/" + NAMES[count].replace(" ", "-") + ".mp3" });
+      }, 120 + g.sides.length * SIDE_MS + 150));
+    }
+
+    document.body.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (n + dir > 8 || n + dir < 1) dir = -dir; // ping-pong: 1→8, then back down to 1, then up again
+      n += dir;
+      show(n, true);
+    });
+
+    show(1, false); // no tones yet (they need a tap on this page), but the name is still said
+  </script>
+</body>
+</html>

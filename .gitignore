@@ -1,0 +1,52 @@
+# ---------- Secrets and credentials ----------
+# Environment files (API keys, AWS settings, etc.)
+.env
+.env.*
+!.env.example
+*.env
+
+# AWS credentials and local deploy settings (bucket names, CloudFront IDs, profiles)
+.aws/
+aws-credentials*
+credentials
+credentials.*
+deploy.env
+deploy.local.*
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.csr
+id_rsa*
+id_ed25519*
+
+# Anything explicitly named as secret
+secrets/
+*secret*
+*.secrets
+*token*.json
+service-account*.json
+
+# Personal / machine-specific Claude Code settings
+.claude/settings.local.json
+
+# ---------- Local-only tools and source material ----------
+# Sound It Out: raw voice recordings and the script that processes them stay on this computer;
+# only the processed results (5/audio/words/*.mp3 and index.js) are kept.
+5/audio/raw/
+split-sounds.sh
+
+# ---------- Junk that shouldn't be shared ----------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+node_modules/
+*.log
+*.bak

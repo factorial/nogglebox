@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Sand Drawing</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body { background: #e6c48a; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .smooth {
+      position: absolute;
+      top: max(12px, 2.2vmin); right: max(12px, 2.2vmin);
+      width: clamp(60px, 12vmin, 120px); height: clamp(60px, 12vmin, 120px);
+      border-radius: 50%;
+      border: max(3px, .6vmin) solid #fff;
+      background: #2ec4ff;
+      color: #fff;
+      display: grid; place-items: center;
+      box-shadow: 0 .6vmin 0 rgba(0,0,0,.2);
+      cursor: pointer;
+      z-index: 2;
+    }
+    .smooth svg { width: 62%; height: 62%; }
+    .smooth:active { transform: scale(.9); }
+  </style>
+</head>
+<body>
+  <canvas id="sand"></canvas>
+  <button class="smooth" id="smooth" type="button" aria-label="Smooth the sand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <path d="M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/>
+      <path d="M2 15c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/>
+    </svg>
+  </button>
+
+  <script>
+    // The sand is drawn as layers composited each frame:
+    //   base texture → raised rim → light edge (offset ↘) → shadow edge (offset ↖) → groove
+    // Strokes are drawn opaquely into each layer, so crossing lines merge into one trench.
+    const view = document.getElementById("sand");
+    const ctx = view.getContext("2d");
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+
+    function makeLayer() { const c = document.createElement("canvas"); return { c, x: c.getContext("2d") }; }
+    const base = makeLayer();
+    const layers = { rim: makeLayer(), light: makeLayer(), dark: makeLayer(), groove: makeLayer() };
+
+    // Grainy sand tiles: normal and a darker "dug" version.
+    function sandTile(r, g, b, spread) {
+      const t = document.createElement("canvas");
+      t.width = t.height = 192;
+      const tx = t.getContext("2d");
+      const img = tx.createImageData(192, 192);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const k = (Math.random() - 0.5) * spread + (Math.random() < 0.025 ? -40 : 0) + (Math.random() < 0.02 ? 30 : 0);
+        img.data[i] = r + k; img.data[i + 1] = g + k * 0.9; img.data[i + 2] = b + k * 0.7; img.data[i + 3] = 255;
+      }
+      tx.putImageData(img, 0, 0);
+      return t;
+    }
+    const tileLight = sandTile(232, 198, 140, 26);
+    const tileDug = sandTile(196, 156, 98, 30);
+
+    function brush() { return Math.max(14, Math.min(34, Math.min(W, H) * 0.032)); }
+
+    function resize() {
+      const nw = innerWidth, nh = innerHeight;
+      const pw = Math.round(nw * DPR), ph = Math.round(nh * DPR);
+      for (const L of [base, ...Object.values(layers)]) {
+        const keep = L !== base && L.c.width ? L.c : null;
+        let copy = null;
+        if (keep) { copy = document.createElement("canvas"); copy.width = keep.width; copy.height = keep.height; copy.getContext("2d").drawImage(keep, 0, 0); }
+        L.c.width = pw; L.c.height = ph;
+        if (copy) L.x.drawImage(copy, 0, 0);
+        L.x.setTransform(DPR, 0, 0, DPR, 0, 0);
+        L.x.lineCap = "round"; L.x.lineJoin = "round";
+      }
+      view.width = pw; view.height = ph;
+      W = nw; H = nh;
+
+      // Base sand with soft dunes of light and shade
+      const b = base.x;
+      b.fillStyle = b.createPattern(tileLight, "repeat");
+      b.fillRect(0, 0, W, H);
+      for (let i = 0; i < 14; i++) {
+        const x = Math.random() * W, y = Math.random() * H, r = (0.15 + Math.random() * 0.3) * Math.max(W, H);
+        const g = b.createRadialGradient(x, y, 0, x, y, r);
+        const tint = Math.random() < 0.5 ? "255,240,210" : "170,120,60";
+        g.addColorStop(0, `rgba(${tint},.12)`); g.addColorStop(1, `rgba(${tint},0)`);
+        b.fillStyle = g; b.fillRect(0, 0, W, H);
+      }
+      layers.groove.x.strokeStyle = layers.groove.x.createPattern(tileDug, "repeat");
+      layers.rim.x.strokeStyle = "#f6dfae";
+      layers.light.x.strokeStyle = "#fcefd2";
+      layers.dark.x.strokeStyle = "#8f6a37";
+      dirty = true;
+    }
+
+    // ---------- drawing ----------
+    const pointers = new Map(); // pointerId → { pts: [last two points] }
+    let dirty = true;
+
+    function seg(from, ctrl, to) {
+      const w = brush();
+      const widths = { rim: w * 1.9, light: w, dark: w, groove: w * 0.9 };
+      for (const k in layers) {
+        const x = layers[k].x;
+        x.lineWidth = widths[k];
+        x.beginPath();
+        x.moveTo(from.x, from.y);
+        if (ctrl) x.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y); else x.lineTo(to.x + 0.01, to.y);
+        x.stroke();
+      }
+      dirty = true;
+    }
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+    function addPoint(p, pt) {
+      const [a, b] = p.pts;
+      if (!b) { seg(a, null, pt); }
+      else { seg(mid(a, b), b, mid(b, pt)); }
+      p.pts = [b || a, pt];
+    }
+
+    view.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      view.setPointerCapture?.(e.pointerId);
+      const pt = { x: e.clientX, y: e.clientY };
+      pointers.set(e.pointerId, { pts: [pt], lastT: e.timeStamp, lastPt: pt });
+      seg(pt, null, pt);
+      scratch.start();
+    });
+    view.addEventListener("pointermove", (e) => {
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (const ev of (evs.length ? evs : [e])) addPoint(p, { x: ev.clientX, y: ev.clientY });
+      const pt = { x: e.clientX, y: e.clientY };
+      const dt = Math.max(1, e.timeStamp - p.lastT);
+      scratch.speed(Math.hypot(pt.x - p.lastPt.x, pt.y - p.lastPt.y) / dt);
+      p.lastT = e.timeStamp; p.lastPt = pt;
+    });
+    function end(e) {
+      pointers.delete(e.pointerId);
+      if (!pointers.size) scratch.speed(0);
+    }
+    view.addEventListener("pointerup", end);
+    view.addEventListener("pointercancel", end);
+
+    // ---------- scratchy sand sound that follows finger speed ----------
+    const scratch = (() => {
+      let gain = null;
+      return {
+        start() {
+          if (gain) return;
+          const ac = Kit.audio();
+          if (!ac) return;
+          const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() < 0.3 ? 1 : 0.3);
+          const src = ac.createBufferSource();
+          src.buffer = buf; src.loop = true;
+          const bp = ac.createBiquadFilter();
+          bp.type = "bandpass"; bp.frequency.value = 2400; bp.Q.value = 0.8;
+          gain = ac.createGain(); gain.gain.value = 0;
+          src.connect(bp).connect(gain).connect(ac.destination);
+          src.start();
+        },
+        speed(v) {
+          if (!gain) return;
+          const ac = Kit.audio();
+          gain.gain.setTargetAtTime(Math.min(0.18, v * 0.09), ac.currentTime, 0.04);
+        },
+      };
+    })();
+
+    // ---------- smoothing wave ----------
+    let wave = null; // { start, from: snapshot of layers } while animating
+    const WAVE_MS = 900;
+
+    function swoosh() {
+      const ac = Kit.audio();
+      if (!ac) return;
+      const t = ac.currentTime, dur = WAVE_MS / 1000;
+      const buf = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const lp = ac.createBiquadFilter(); lp.type = "lowpass";
+      lp.frequency.setValueAtTime(400, t);
+      lp.frequency.exponentialRampToValueAtTime(2500, t + dur * 0.5);
+      lp.frequency.exponentialRampToValueAtTime(300, t + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + dur * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(lp).connect(g).connect(ac.destination);
+      src.start(t);
+    }
+
+    document.getElementById("smooth").addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (wave) return;
+      wave = { start: performance.now() };
+      swoosh();
+    });
+
+    // ---------- render ----------
+    function render(now) {
+      let waveX = null;
+      if (wave) {
+        const p = Math.min(1, (now - wave.start) / WAVE_MS);
+        const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        waveX = eased * (W + W * 0.25);
+        for (const L of Object.values(layers)) L.x.clearRect(0, 0, waveX - W * 0.08, H);
+        dirty = true;
+        if (p >= 1) { wave = null; for (const L of Object.values(layers)) L.x.clearRect(0, 0, W, H); }
+      }
+      if (dirty) {
+        dirty = false;
+        const o = brush() * 0.14 * DPR;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(base.c, 0, 0);
+        ctx.globalAlpha = 0.55; ctx.drawImage(layers.rim.c, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(layers.light.c, o, o);
+        ctx.drawImage(layers.dark.c, -o, -o);
+        ctx.drawImage(layers.groove.c, 0, 0);
+        if (waveX != null) {
+          // a foamy band of water sweeping across
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          const bw = W * 0.25;
+          const g = ctx.createLinearGradient(waveX - bw, 0, waveX, 0);
+          g.addColorStop(0, "rgba(120,200,255,0)");
+          g.addColorStop(0.6, "rgba(120,200,255,.45)");
+          g.addColorStop(0.92, "rgba(255,255,255,.85)");
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(waveX - bw, 0, bw, H);
+        }
+      }
+      requestAnimationFrame(render);
+    }
+
+    addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

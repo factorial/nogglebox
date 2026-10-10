@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Letter Tracing</title>
+  <link rel="stylesheet" href="../shared/page.css">
+  <script src="../shared/kit.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 35%, #ffffff, #dff3ff 70%);
+      display: flex; align-items: center; justify-content: center;
+      gap: 3vmin;
+    }
+    @media (orientation: landscape) {
+      body { flex-direction: row; padding: calc(var(--abc-top) + 7vmin) var(--nav-safe) var(--nav-safe); }
+      #abc { font-size: min(3.8vmin, calc((100vw - 2 * var(--nav-safe)) / 28)); }
+      .pics { flex-direction: column; }
+    }
+    @media (orientation: portrait) {
+      body { flex-direction: column; padding: var(--nav-safe) 3vmin var(--nav-safe); }
+      #abc { font-size: min(4.2vmin, calc((100vw - 2 * var(--nav-safe)) / 15)); } /* two rows */
+      .pics { flex-direction: row; }
+    }
+
+    :root { --abc-top: max(12px, 2.2vmin); --board: min(64vmin, 80vw, 70vh, calc(100dvh - var(--nav-safe) - var(--abc-top) - 10vmin)); }
+    #board { flex: none; width: var(--board); height: var(--board); overflow: visible; touch-action: none; }
+    #board.pop { animation: pop 600ms cubic-bezier(.3,1.6,.5,1); }
+    @keyframes pop { 40% { transform: scale(1.12) rotate(-4deg); } 100% { transform: scale(1); } }
+
+    .guide   { fill: none; stroke: #e3e8f0; stroke-width: 17; stroke-linecap: round; stroke-linejoin: round; }
+    .dashes  { fill: none; stroke: #b8c2d4; stroke-width: 1.6; stroke-dasharray: 3 4; stroke-linecap: round; stroke-linejoin: round; }
+    .ink     { fill: none; stroke-width: 15; stroke-linecap: round; stroke-linejoin: round; }
+    .start circle { fill: var(--green); stroke: #fff; stroke-width: 1.5; }
+    .start text { font-family: var(--font); font-weight: 800; font-size: 6px; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+    .start.first circle { animation: pulse 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes pulse { 50% { transform: scale(1.35); } }
+    .finger { fill: rgba(29,43,83,.18); pointer-events: none; }
+
+    .pics { display: flex; gap: 2.4vmin; flex: none; }
+    .card {
+      background: #fff;
+      border-radius: 3vmin;
+      padding: 1.2vmin 2vmin .6vmin;
+      box-shadow: 0 .6vmin 0 rgba(29,43,83,.12), 0 1.2vmin 3vmin rgba(29,43,83,.08);
+      text-align: center;
+      min-width: 18vmin;
+      opacity: 0; transform: scale(.5);
+      transition: opacity 250ms, transform 400ms cubic-bezier(.3,1.6,.5,1);
+    }
+    .card.in { opacity: 1; transform: scale(1); }
+    .card.cheer { animation: cheer 700ms cubic-bezier(.3,1.6,.5,1); }
+    @keyframes cheer { 30% { transform: translateY(-3vmin) scale(1.12) rotate(-5deg); } 60% { transform: translateY(0) scale(.96) rotate(3deg); } }
+    .emoji { font-size: min(11vmin, 13vw); line-height: 1.15; }
+    .word { font-weight: 800; font-size: min(5vmin, 5.5vw); line-height: 1; color: var(--ink); white-space: nowrap; }
+    .word b { font-weight: 800; }
+
+    /* ---------- alphabet progress strip ---------- */
+    #abc {
+      position: absolute; top: var(--abc-top); left: var(--nav-safe); right: var(--nav-safe);
+      display: flex; flex-wrap: wrap; justify-content: center; gap: .15em .1em;
+      pointer-events: none;
+    }
+    .chip {
+      width: 1.15em; height: 1.3em;
+      display: grid; place-items: center;
+      border-radius: .3em;
+      font-weight: 800; line-height: 1;
+      color: #c3cbd9; background: rgba(255,255,255,.7);
+      transition: color 300ms, background 300ms;
+    }
+    .chip.now { box-shadow: inset 0 0 0 .1em #8a96ab; color: #8a96ab; }
+    .chip.got { color: #fff; }
+    .chip.pop { animation: chip-pop 700ms cubic-bezier(.3,1.8,.5,1); }
+    @keyframes chip-pop { 0% { transform: scale(.3); } 50% { transform: scale(1.7) rotate(-12deg); } 100% { transform: scale(1); } }
+    .chip.party { animation: chip-wave 700ms ease-in-out infinite; animation-delay: calc(var(--i) * 45ms); }
+    @keyframes chip-wave { 50% { transform: translateY(-50%) scale(1.25); } }
+
+    /* ---------- whole-alphabet party ---------- */
+    #party {
+      position: fixed; inset: 0; z-index: 50;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2vmin;
+      background: radial-gradient(circle, rgba(255,255,255,.6), rgba(255,255,255,0) 70%);
+      pointer-events: none;
+    }
+    #party.on { display: flex; }
+    .trophy { font-size: min(34vmin, 40vw); line-height: 1; animation: trophy 900ms cubic-bezier(.3,1.6,.5,1) both, bounce 1s ease-in-out 900ms infinite; }
+    @keyframes trophy { from { transform: scale(0) rotate(-180deg); } to { transform: scale(1) rotate(0); } }
+    @keyframes bounce { 50% { transform: translateY(-6%) rotate(4deg) scale(1.05); } }
+    .atoz {
+      font-weight: 800; font-size: min(16vmin, 18vw); line-height: 1;
+      white-space: nowrap;
+      -webkit-text-stroke: .06em #fff; paint-order: stroke fill;
+      animation: trophy 700ms cubic-bezier(.3,1.6,.5,1) 300ms both;
+    }
+    .atoz span { display: inline-block; animation: chip-wave 800ms ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div id="abc" aria-hidden="true"></div>
+  <div id="party" aria-hidden="true">
+    <div class="trophy">🏆</div>
+    <div class="atoz"><span style="color:#ff4d4d">A</span> <span style="color:#ffc300;animation-delay:.15s">to</span> <span style="color:#2a8fff;animation-delay:.3s">Z</span><span style="color:#3ddc84;animation-delay:.45s">!</span></div>
+  </div>
+  <svg id="board" viewBox="-12 -12 124 124" aria-label="Trace the letter">
+    <g id="guide"></g>
+    <g id="ink"></g>
+    <g id="starts"></g>
+    <circle class="finger" id="finger" r="9" visibility="hidden"></circle>
+  </svg>
+  <div class="pics" id="pics"></div>
+
+  <script>
+    // ---------- letter shapes ----------
+    // Uppercase letters as strokes (polylines) in a 100×100 box, y pointing down.
+    // arc(): points on an ellipse from angle a0 to a1 (degrees; 0 = right, 90 = down).
+    function arc(cx, cy, rx, ry, a0, a1) {
+      const pts = [], steps = Math.max(8, Math.ceil(Math.abs(a1 - a0) / 8));
+      for (let i = 0; i <= steps; i++) {
+        const a = ((a0 + (a1 - a0) * (i / steps)) * Math.PI) / 180;
+        pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+      }
+      return pts;
+    }
+    const bowl = (top, bottom) => {               // P/B/R-style bump from the stem at x=25
+      const r = (bottom - top) / 2;
+      return [[25, top], [52, top], ...arc(52, top + r, r, r, -90, 90), [25, bottom]];
+    };
+    const O = arc(50, 50, 40, 45, -90, 270);
+
+    const SHAPES = {
+      A: [[[15, 95], [50, 5], [85, 95]], [[30, 60], [70, 60]]],
+      B: [[[25, 5], [25, 95]], bowl(5, 50), [[25, 50], [56, 50], ...arc(56, 72.5, 22.5, 22.5, -90, 90), [25, 95]]],
+      C: [arc(55, 50, 40, 45, -45, -315)],
+      D: [[[25, 5], [25, 95]], [[25, 5], [42, 5], ...arc(42, 50, 43, 45, -90, 90), [25, 95]]],
+      E: [[[80, 5], [25, 5], [25, 95], [80, 95]], [[25, 50], [70, 50]]],
+      F: [[[80, 5], [25, 5], [25, 95]], [[25, 50], [70, 50]]],
+      G: [[...arc(55, 50, 40, 45, -45, -360), [62, 50]]],
+      H: [[[20, 5], [20, 95]], [[80, 5], [80, 95]], [[20, 50], [80, 50]]],
+      I: [[[50, 5], [50, 95]], [[28, 5], [72, 5]], [[28, 95], [72, 95]]],
+      J: [[[40, 5], [85, 5]], [[68, 5], [68, 68], ...arc(46, 68, 22, 25, 0, 180)]],
+      K: [[[25, 5], [25, 95]], [[80, 5], [25, 60]], [[44, 42], [82, 95]]],
+      L: [[[25, 5], [25, 95], [80, 95]]],
+      M: [[[12, 95], [15, 5], [50, 62], [85, 5], [88, 95]]],
+      N: [[[20, 95], [20, 5], [80, 95], [80, 5]]],
+      O: [O],
+      P: [[[25, 5], [25, 95]], bowl(5, 52)],
+      Q: [O, [[58, 68], [88, 98]]],
+      R: [[[25, 5], [25, 95]], bowl(5, 52), [[48, 52], [82, 95]]],
+      S: [[...arc(50, 28, 30, 23, -15, -270), ...arc(50, 73, 32, 22, -90, 165)]],
+      T: [[[12, 5], [88, 5]], [[50, 5], [50, 95]]],
+      U: [[[20, 5], [20, 60], ...arc(50, 60, 30, 35, 180, 0), [80, 5]]],
+      V: [[[12, 5], [50, 95], [88, 5]]],
+      W: [[[5, 5], [27, 95], [50, 30], [73, 95], [95, 5]]],
+      X: [[[18, 5], [82, 95]], [[82, 5], [18, 95]]],
+      Y: [[[16, 5], [50, 50], [84, 5]], [[50, 50], [50, 95]]],
+      Z: [[[18, 5], [82, 5], [18, 95], [82, 95]]],
+    };
+
+    // ---------- pictures: words with the letter's sound ----------
+    const WORDS = {
+      A: [["🐜", "Ant"], ["🍎", "Apple"], ["🐊", "Alligator"]],
+      B: [["🐻", "Bear"], ["🍌", "Banana"], ["🚌", "Bus"]],
+      C: [["🐱", "Cat"], ["🚗", "Car"], ["🍪", "Cookie"]],
+      D: [["🐶", "Dog"], ["🦆", "Duck"], ["🍩", "Donut"]],
+      E: [["🐘", "Elephant"], ["🥚", "Egg"], ["✉️", "Envelope"]],
+      F: [["🐟", "Fish"], ["🐸", "Frog"], ["🌸", "Flower"]],
+      G: [["🐐", "Goat"], ["🍇", "Grapes"], ["🎸", "Guitar"]],
+      H: [["🐴", "Horse"], ["🏠", "House"], ["🎩", "Hat"]],
+      I: [["🦎", "Iguana"], ["🐞", "Insect"], ["🍦", "Ice cream"]],
+      J: [["🧃", "Juice"], ["🪼", "Jellyfish"], ["🧥", "Jacket"]],
+      K: [["🔑", "Key"], ["🪁", "Kite"], ["🦘", "Kangaroo"]],
+      L: [["🦁", "Lion"], ["🍋", "Lemon"], ["🍭", "Lollipop"]],
+      M: [["🐒", "Monkey"], ["🌙", "Moon"], ["🍄", "Mushroom"]],
+      N: [["👃", "Nose"], ["🪺", "Nest"], ["🥜", "Nut"]],
+      O: [["🐙", "Octopus"], ["🦦", "Otter"], ["🍊", "Orange"]],
+      P: [["🐷", "Pig"], ["🍕", "Pizza"], ["🐧", "Penguin"]],
+      Q: [["👸", "Queen"], ["❓", "Question"], ["🤫", "Quiet"]],
+      R: [["🐰", "Rabbit"], ["🌈", "Rainbow"], ["🚀", "Rocket"]],
+      S: [["☀️", "Sun"], ["🐍", "Snake"], ["⭐", "Star"]],
+      T: [["🐯", "Tiger"], ["🌳", "Tree"], ["🚂", "Train"]],
+      U: [["☂️", "Umbrella"], ["⬆️", "Up"], ["🦄", "Unicorn"]],
+      V: [["🎻", "Violin"], ["🌋", "Volcano"], ["🚐", "Van"]],
+      W: [["🐋", "Whale"], ["🍉", "Watermelon"], ["🐺", "Wolf"]],
+      X: [["🦊", "Fox"], ["📦", "Box"], ["🎷", "Saxophone"]],
+      Y: [["🪀", "Yo-yo"], ["🧶", "Yarn"], ["💛", "Yellow"]],
+      Z: [["🦓", "Zebra"], ["🍕", "Pizza"], ["🤐", "Zipper"]],
+    };
+
+    const COLORS = ["#ff4d4d", "#ff9f1c", "#ffc300", "#3ddc84", "#2ec4ff", "#2a8fff", "#9b5de5", "#f15bb5"];
+    const NS = "http://www.w3.org/2000/svg";
+    const HIT = 11;        // how close (in letter units) the finger must pass to count
+    const STEP = 2.5;      // spacing of checkpoints along each stroke
+    const DONE_AT = 0.9;   // fraction of all checkpoints needed to finish…
+    const STROKE_AT = 0.8; // …and each stroke's own part must be at least this traced
+    // A stroke's "own" part is the stretch not overlapping any other stroke. Overlaps get
+    // colored in for free while tracing the other strokes (A's crossbar ends, Q's tail near
+    // the circle), so only the own part proves the child actually drew that stroke.
+    const OWN_MARGIN = HIT + 4;
+
+    const board = document.getElementById("board");
+    const finger = document.getElementById("finger");
+    const $ = (id) => document.getElementById(id);
+
+    // Checkpoints evenly spaced along a polyline.
+    function samples(line) {
+      const out = [];
+      for (let i = 0; i < line.length - 1; i++) {
+        const [x0, y0] = line[i], [x1, y1] = line[i + 1];
+        const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / STEP));
+        for (let k = 0; k < n; k++) out.push({ x: x0 + ((x1 - x0) * k) / n, y: y0 + ((y1 - y0) * k) / n, hit: false });
+      }
+      const [xe, ye] = line[line.length - 1];
+      out.push({ x: xe, y: ye, hit: false });
+      return out;
+    }
+    const pathD = (line) => "M " + line.map(([x, y]) => x.toFixed(1) + " " + y.toFixed(1)).join(" L ");
+
+    // ---------- round state ----------
+    // ---------- alphabet progress (remembered on this device) ----------
+    const ALPHABET = Object.keys(SHAPES);
+    const STORE = "tracing.done";
+    let finished = new Map(); // letter → color it was traced in
+    try { finished = new Map(JSON.parse(localStorage.getItem(STORE) || "[]")); } catch (_) {}
+    // Testing: open 4/index.html?almost to have every letter but one already done.
+    if (new URLSearchParams(location.search).has("almost")) {
+      finished = new Map(ALPHABET.slice(1).map((l) => [l, COLORS[Math.floor(Math.random() * COLORS.length)]]));
+    }
+    const saveFinished = () => { try { localStorage.setItem(STORE, JSON.stringify([...finished])); } catch (_) {} };
+
+    const chips = {};
+    ALPHABET.forEach((l, i) => {
+      const c = document.createElement("div");
+      c.className = "chip";
+      c.textContent = l;
+      c.style.setProperty("--i", i);
+      $("abc").appendChild(c);
+      chips[l] = c;
+    });
+    function paintChips() {
+      for (const l of ALPHABET) {
+        const c = chips[l], col = finished.get(l);
+        c.classList.toggle("got", !!col);
+        c.classList.toggle("now", l === letter && !col);
+        c.style.background = col || "";
+      }
+    }
+
+    let deck = [], letter = null, strokes = [], color = COLORS[0], total = 0, hits = 0, done = false, nextChime = 0.1;
+
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+    function newLetter() {
+      // Letters not traced yet come first.
+      deck = deck.filter((l) => !finished.has(l));
+      if (!deck.length) deck = shuffle(ALPHABET.filter((l) => !finished.has(l) && l !== letter));
+      if (!deck.length) deck = shuffle(ALPHABET.filter((l) => l !== letter));
+      letter = deck.pop();
+      color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      done = false; hits = 0; nextChime = 0.1;
+      paintChips();
+      strokes = SHAPES[letter].map((line) => ({ line, pts: samples(line), ink: null }));
+      strokes.forEach((st) => {
+        const others = strokes.filter((o) => o !== st).flatMap((o) => o.pts);
+        st.own = st.pts.filter((q) => !others.some((p) => (p.x - q.x) ** 2 + (p.y - q.y) ** 2 < OWN_MARGIN ** 2));
+        if (!st.own.length) st.own = st.pts;
+      });
+      total = strokes.reduce((s, st) => s + st.pts.length, 0);
+
+      $("guide").replaceChildren(); $("ink").replaceChildren(); $("starts").replaceChildren();
+      strokes.forEach((st, i) => {
+        const d = pathD(st.line);
+        for (const cls of ["guide", "dashes"]) {
+          const p = document.createElementNS(NS, "path");
+          p.setAttribute("class", cls); p.setAttribute("d", d);
+          $("guide").appendChild(p);
+        }
+        st.ink = document.createElementNS(NS, "path");
+        st.ink.setAttribute("class", "ink");
+        st.ink.setAttribute("stroke", color);
+        $("ink").appendChild(st.ink);
+
+        const [sx, sy] = st.line[0];
+        const g = document.createElementNS(NS, "g");
+        g.setAttribute("class", "start" + (i === 0 ? " first" : ""));
+        g.setAttribute("transform", `translate(${sx} ${sy})`);
+        g.innerHTML = `<circle r="5"/><text>${i + 1}</text>`;
+        $("starts").prepend(g); // lower numbers on top where starts overlap
+        st.dot = g;
+      });
+
+      // Pictures, with the letter highlighted in each word
+      const pics = $("pics");
+      pics.replaceChildren();
+      WORDS[letter].forEach(([emoji, word], i) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        const re = new RegExp(letter, "gi");
+        const w = word.replace(re, (m) => `<b style="color:${color}">${m}</b>`);
+        card.innerHTML = `<div class="emoji">${emoji}</div><div class="word">${w}</div>`;
+        pics.appendChild(card);
+        setTimeout(() => card.classList.add("in"), 150 + i * 150);
+      });
+    }
+
+    // Redraw the colored ink: segments between neighbouring checkpoints that are both hit.
+    function drawInk(st) {
+      let d = "", run = false;
+      for (let i = 0; i < st.pts.length; i++) {
+        const p = st.pts[i];
+        if (p.hit) {
+          d += (run ? " L " : " M ") + p.x.toFixed(1) + " " + p.y.toFixed(1);
+          if (!run && (i === st.pts.length - 1 || !st.pts[i + 1].hit)) d += " l 0.01 0"; // lone dot
+          run = true;
+        } else run = false;
+      }
+      st.ink.setAttribute("d", d);
+    }
+
+    // ---------- tracing ----------
+    function toLetter(e) {
+      const pt = board.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(board.getScreenCTM().inverse());
+    }
+
+    let last = null, down = null; // one tracing finger at a time
+    function touch(p) {
+      // Check along the segment from the previous position so fast swipes still count.
+      const from = last || p;
+      const steps = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / 3));
+      let changed = false;
+      for (const st of strokes) {
+        let strokeChanged = false;
+        for (const q of st.pts) {
+          if (q.hit) continue;
+          for (let k = 0; k <= steps; k++) {
+            const x = from.x + ((p.x - from.x) * k) / steps, y = from.y + ((p.y - from.y) * k) / steps;
+            if ((q.x - x) ** 2 + (q.y - y) ** 2 < HIT * HIT) { q.hit = true; hits++; strokeChanged = true; break; }
+          }
+        }
+        if (strokeChanged) {
+          drawInk(st);
+          changed = true;
+          // Once a stroke is mostly traced, its start dot steps aside, revealing any dot beneath.
+          if (st.dot && strokeDone(st)) {
+            st.dot.remove(); st.dot = null;
+            const nextUp = strokes.find((o) => o.dot);
+            if (nextUp) nextUp.dot.classList.add("first"); // the next start dot takes over the pulse
+          }
+        }
+      }
+      last = p;
+      if (changed) progress();
+    }
+
+    const strokeDone = (st) => st.own.filter((q) => q.hit).length >= st.own.length * STROKE_AT;
+
+    function progress() {
+      const f = hits / total;
+      while (f >= nextChime && nextChime < DONE_AT) {
+        Kit.tone(330 * Math.pow(2, nextChime * 1.2), 0.12, { type: "triangle", volume: 0.12 });
+        nextChime += 0.1;
+      }
+      if (f >= DONE_AT && strokes.every(strokeDone) && !done) win();
+    }
+
+    async function win() {
+      done = true;
+      // fill in everything so the letter looks complete
+      for (const st of strokes) { st.pts.forEach((q) => { q.hit = true; }); drawInk(st); }
+      $("starts").replaceChildren();
+      board.classList.remove("pop"); void board.getBoundingClientRect(); board.classList.add("pop");
+      [523, 659, 784, 1047].forEach((f, i) => Kit.tone(f, 0.25, { type: "triangle", volume: 0.2, delay: i * 0.11 }));
+      document.querySelectorAll(".card").forEach((c, i) => setTimeout(() => {
+        c.classList.remove("cheer"); void c.offsetWidth; c.classList.add("cheer");
+      }, 200 + i * 160));
+
+      finished.set(letter, color);
+      saveFinished();
+      paintChips();
+      const chip = chips[letter];
+      chip.classList.remove("pop"); void chip.offsetWidth; chip.classList.add("pop");
+      const allDone = finished.size === ALPHABET.length;
+
+      const { confetti } = await Kit.use("confetti");
+      const r = board.getBoundingClientRect();
+      confetti({
+        particleCount: 120, spread: 80, startVelocity: 40,
+        origin: { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight },
+        colors: [color, "#ffc300", "#3ddc84", "#2ec4ff", "#f15bb5"],
+        disableForReducedMotion: true,
+      });
+
+      if (allDone) setTimeout(() => party(confetti), 900);
+
+      setTimeout(() => {
+        document.querySelectorAll(".card").forEach((c) => c.classList.remove("in"));
+        setTimeout(newLetter, 300);
+      }, allDone ? 9000 : 2200);
+    }
+
+    // ---------- the big surprise for finishing A–Z ----------
+    function party(confetti) {
+      const PARTY_MS = 7500;
+      const end = performance.now() + PARTY_MS;
+      const colors = ["#ff4d4d", "#ff9f1c", "#ffc300", "#3ddc84", "#2ec4ff", "#2a8fff", "#9b5de5", "#f15bb5"];
+      const shapes = ["⭐", "🎉", "🌈", "🦄", "🎈"].map((text) => {
+        try { return confetti.shapeFromText({ text, scalar: 3 }); } catch (_) { return "star"; }
+      });
+
+      $("party").classList.add("on");
+      ALPHABET.forEach((l) => chips[l].classList.add("party"));
+
+      // Fanfare: ta-da-da-DAAA, ta-da-DAAA, then a sparkly run up the scale
+      const notes = [[392, 0, .14], [523, .15, .14], [659, .3, .14], [784, .45, .5],
+                     [659, 1.0, .14], [784, 1.15, .7],
+                     ...[523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319].map((f, i) => [f, 2.0 + i * .07, .2])];
+      notes.forEach(([f, t, d]) => {
+        Kit.tone(f, d, { type: "square", volume: 0.07, delay: t });
+        Kit.tone(f, d + 0.1, { type: "triangle", volume: 0.18, delay: t });
+      });
+      setTimeout(() => {
+        // TODO voice actor: record "You did the whole alphabet!" as 4/audio/whole-alphabet.mp3
+        Kit.say("You did the whole alphabet!", { audio: "audio/whole-alphabet.mp3", pitch: 1.4, rate: 1 });
+      }, 2900);
+
+      // Cannons from both bottom corners the whole time…
+      let frame = 0;
+      (function cannons() {
+        if (frame++ % 2 === 0) { // every other frame keeps older tablets smooth
+          confetti({ particleCount: 6, angle: 60, spread: 60, startVelocity: 70, origin: { x: 0, y: 1 }, colors });
+          confetti({ particleCount: 6, angle: 120, spread: 60, startVelocity: 70, origin: { x: 1, y: 1 }, colors });
+        }
+        if (performance.now() < end - 1500) requestAnimationFrame(cannons);
+      })();
+      // …big bursts popping all over…
+      for (let i = 0; i < 9; i++) {
+        setTimeout(() => confetti({
+          particleCount: 160, spread: 360, startVelocity: 45, ticks: 220, scalar: 1.2,
+          origin: { x: 0.15 + Math.random() * 0.7, y: 0.15 + Math.random() * 0.45 }, colors,
+        }), 300 + i * 650);
+      }
+      // …and emoji raining from the sky.
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => confetti({
+          particleCount: 30, spread: 160, angle: 270, startVelocity: 15, gravity: 0.6, ticks: 400,
+          origin: { x: Math.random(), y: -0.1 }, shapes, scalar: 3, flat: true,
+        }), 800 + i * 900);
+      }
+
+      setTimeout(() => {
+        $("party").classList.remove("on");
+        ALPHABET.forEach((l) => chips[l].classList.remove("party"));
+        finished.clear(); // start a fresh alphabet
+        saveFinished();
+        paintChips();
+      }, PARTY_MS);
+    }
+
+    board.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (done) return;
+      try { board.setPointerCapture(e.pointerId); } catch (_) {}
+      down = e.pointerId;
+      last = null;
+      const p = toLetter(e);
+      finger.setAttribute("cx", p.x); finger.setAttribute("cy", p.y);
+      finger.setAttribute("visibility", "visible");
+      touch(p);
+    });
+    board.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== down || done) return;
+      const p = toLetter(e);
+      finger.setAttribute("cx", p.x); finger.setAttribute("cy", p.y);
+      touch(p);
+    });
+    const lift = (e) => {
+      if (e.pointerId !== down) return;
+      down = null; last = null;
+      finger.setAttribute("visibility", "hidden");
+    };
+    board.addEventListener("pointerup", lift);
+    board.addEventListener("pointercancel", lift);
+
+    newLetter();
+  </script>
+</body>
+</html>

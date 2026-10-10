@@ -1,0 +1,80 @@
+@import url("fonts/fonts.css"); /* the bundled Baloo 2 font */
+/* Base styles for every sub-page: full-screen, never scrolls, kid-proof. */
+:root {
+  --sky: #4cc3ff;
+  --sun: #ffd23f;
+  --pink: #ff5d8f;
+  --green: #3ddc84;
+  --orange: #ff9f1c;
+  --purple: #9b5de5;
+  --red: #ff4d4d;
+  --blue: #2a8fff;
+  --ink: #1d2b53;
+  --white: #ffffff;
+  --font: "Baloo 2", "Arial Rounded MT Bold", "Comic Sans MS", system-ui, sans-serif;
+  /* Keep important stuff out of these zones: the harness's nav buttons sit there. */
+  --nav-btn: clamp(60px, 12vmin, 120px);
+  --nav-safe: calc(var(--nav-btn) + max(12px, 2.2vmin) * 2);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* pages handle their own touches; no scroll/zoom */
+}
+body { position: fixed; inset: 0; height: 100dvh; }
+
+img, svg, canvas, video { display: block; -webkit-user-drag: none; }
+
+/* ---------- Kit: video ---------- */
+.kit-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  background: #000;
+  object-fit: contain;
+}
+.kit-video.cover { object-fit: cover; }
+
+.kit-bigbtn {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(110px, 26vmin, 240px); height: clamp(110px, 26vmin, 240px);
+  border-radius: 50%;
+  border: max(4px, .9vmin) solid #fff;
+  background: var(--green);
+  color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 1vmin 0 rgba(0,0,0,.25), 0 2vmin 4vmin rgba(0,0,0,.3);
+  cursor: pointer;
+  animation: kit-throb 1.4s ease-in-out infinite;
+  z-index: 5;
+}
+.kit-bigbtn svg { width: 50%; height: 50%; fill: currentColor; }
+.kit-bigbtn.sound { background: var(--sun); color: var(--ink); top: 22%; width: clamp(80px, 18vmin, 170px); height: clamp(80px, 18vmin, 170px); }
+@keyframes kit-throb { 50% { transform: translate(-50%, -50%) scale(1.08); } }
+
+/* ---------- Kit: friendly error (only when a page is opened on its own; inside the
+   harness the harness shows its own error screen) ---------- */
+.kit-error {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2vmin;
+  background: linear-gradient(#b8a4ff, #ffc6e0);
+  color: var(--ink);
+  text-align: center;
+  font-weight: 800;
+  font-size: min(7vmin, 7vw);
+}
+.kit-error small { font-weight: 600; font-size: .45em; opacity: .7; max-width: 80vw; }

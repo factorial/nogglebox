@@ -1,0 +1,247 @@
+@import url("../shared/fonts/fonts.css"); /* the bundled Baloo 2 font */
+:root {
+  --sky: #4cc3ff;
+  --sky-deep: #2a8fff;
+  --sun: #ffd23f;
+  --pink: #ff5d8f;
+  --green: #3ddc84;
+  --orange: #ff9f1c;
+  --purple: #9b5de5;
+  --ink: #1d2b53;
+  --white: #ffffff;
+
+  --edge: max(12px, 2.2vmin);
+  --btn: clamp(60px, 12vmin, 120px);
+  --font: "Baloo 2", "Arial Rounded MT Bold", "Comic Sans MS", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--sky);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* no scrolling, no pinch or double-tap zoom */
+}
+body { position: fixed; inset: 0; height: 100dvh; }
+
+button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: none; }
+
+/* ---------- Stage (sub-page iframes) ---------- */
+#stage { position: absolute; inset: 0; overflow: hidden; background: #000; }
+#stage > * {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: 0; display: block;
+  background: #fff;
+  transition: transform 420ms cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+#stage > .from-right { transform: translateX(100%); }
+#stage > .from-left  { transform: translateX(-100%); }
+#stage > .from-pop   { transform: scale(0.2) rotate(-12deg); }
+#stage > .to-left    { transform: translateX(-100%); }
+#stage > .to-right   { transform: translateX(100%); }
+#stage > .to-pop     { transform: scale(0.2) rotate(12deg); }
+
+/* Video pages */
+#stage > .video-view { background: #000; overflow: hidden; }
+.video-view video, .video-view canvas.still {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+}
+.video-view .cover { object-fit: cover; }
+.vbtn {
+  position: absolute; left: 50%; top: 50%;
+  width: clamp(110px, 26vmin, 240px); height: clamp(110px, 26vmin, 240px);
+  margin: calc(clamp(110px, 26vmin, 240px) / -2) 0 0 calc(clamp(110px, 26vmin, 240px) / -2);
+  border-radius: 50%;
+  border: max(4px, .9vmin) solid var(--white);
+  background: var(--green); color: var(--white);
+  display: grid; place-items: center;
+  box-shadow: 0 1vmin 0 rgba(0,0,0,.25), 0 2vmin 4vmin rgba(0,0,0,.3);
+  animation: throb 1.4s ease-in-out infinite;
+}
+.vbtn[hidden] { display: none; }
+.vbtn svg { width: 50%; height: 50%; fill: currentColor; }
+.vbtn.sound { background: var(--sun); color: var(--ink); }
+
+body.is-home #stage { visibility: hidden; }
+body:not(.is-home) #landing { display: none; }
+
+/* ---------- Friendly error screen ---------- */
+#oops {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1vmin;
+  padding: var(--edge) var(--edge) calc(var(--btn) + var(--edge) * 2);
+  text-align: center;
+  background: linear-gradient(#b8a4ff, #ffc6e0);
+  animation: fade-in 300ms ease;
+}
+#oops[hidden] { display: none; }
+#oops h2 { margin: 0; font-weight: 800; font-size: min(8vmin, 7vw); line-height: 1; }
+#oops p  { margin: 0; font-weight: 600; font-size: min(5vmin, 5vw); }
+.oops-cloud { width: min(42vmin, 60vw); height: auto; animation: float 3s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-4%); } }
+@keyframes fade-in { from { opacity: 0; } }
+body.is-home #oops { display: none; }
+
+/* ---------- Nav buttons ---------- */
+.nav-btn {
+  position: absolute;
+  z-index: 10;
+  width: var(--btn); height: var(--btn);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--white);
+  box-shadow: 0 0.6vmin 0 rgba(0,0,0,.22), 0 1.2vmin 2.4vmin rgba(0,0,0,.18);
+  border: max(3px, 0.6vmin) solid var(--white);
+  transition: transform 120ms ease, opacity 200ms ease;
+}
+.nav-btn svg { width: 54%; height: 54%; fill: currentColor; }
+.nav-btn:active { transform: scale(0.88); }
+.nav-btn.bump { animation: bump 300ms ease; }
+@keyframes bump { 40% { transform: scale(0.82); } 100% { transform: scale(1); } }
+
+.back   { left:  var(--edge); bottom: var(--edge); background: var(--orange); }
+.next   { right: var(--edge); bottom: var(--edge); background: var(--green); }
+.next svg { transform: translateX(6%); }
+.back svg { transform: translateX(-6%); }
+
+
+/* ---------- Landing ---------- */
+#landing {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 115%, #7be07b 0 45%, transparent 46%),
+    linear-gradient(#59ccff, #a6e6ff 70%);
+}
+.landing-inner {
+  position: absolute; inset: 0;
+  padding: var(--edge) var(--edge) calc(var(--edge) + 14vmin); /* a bit above center, clear of the hills */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2.4vmin;
+  text-align: center;
+}
+/* The logo (brand/nogglebox-logo.svg), gently floating */
+.logo { margin: 0; line-height: 0; }
+.logo img {
+  display: block;
+  width: min(88vw, 95vmin);
+  height: auto;
+  filter: drop-shadow(0 1vmin 0 rgba(29,43,83,.18));
+  animation: logo-float 3.2s ease-in-out infinite;
+}
+@keyframes logo-float { 50% { transform: translateY(-4%) rotate(-1deg); } }
+
+.tagline {
+  margin: 0;
+  font-weight: 800;
+  font-size: min(7vmin, 7vw);
+  color: var(--ink);
+}
+
+.go {
+  display: inline-flex; align-items: center; gap: .3em;
+  padding: .15em .9em .1em;
+  font-weight: 800;
+  font-size: min(8vmin, 8vw);
+  color: var(--white);
+  background: var(--purple);
+  border-radius: 999px;
+  border: max(4px, .8vmin) solid var(--white);
+  box-shadow: 0 1vmin 0 #6a35ad;
+  animation: throb 1.6s ease-in-out infinite;
+}
+.go:active { transform: translateY(.6vmin) scale(.96); box-shadow: 0 .4vmin 0 #6a35ad; animation: none; }
+@keyframes throb { 50% { transform: scale(1.07); } }
+
+/* ---------- For grown-ups: "?" button and info card ---------- */
+/* Same round style as the nav buttons (.nav-btn), smaller, in the top-left corner */
+.info-btn {
+  left: var(--edge); top: var(--edge);
+  width: calc(var(--btn) * 0.72); height: calc(var(--btn) * 0.72);
+  background: var(--sky-deep);
+  font-weight: 800; font-size: calc(var(--btn) * 0.46); line-height: 1;
+  padding-top: .08em; /* optically center the "?" in Baloo's tall line box */
+  z-index: 11;
+}
+.info {
+  position: absolute; inset: 0; z-index: 30;
+  display: grid; place-items: center;
+  padding: var(--edge);
+  background: rgba(29,43,83,.55);
+}
+.info[hidden] { display: none; }
+.info-card {
+  position: relative;
+  width: min(92vw, 680px); max-height: 92%;
+  overflow: hidden;
+  padding: max(20px, 3.5vmin) max(20px, 4vmin);
+  border-radius: max(16px, 3vmin);
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600; font-size: clamp(14px, 2.6vmin, 20px); line-height: 1.4;
+  text-align: left;
+  box-shadow: 0 2vmin 6vmin rgba(0,0,0,.3);
+  -webkit-user-select: text; user-select: text;
+}
+.info-card h2 { margin: 0 0 .4em; font-weight: 800; font-size: 1.6em; color: var(--sky-deep); }
+.info-card p { margin: 0 0 .8em; }
+.info-card p:last-child { margin: 0; }
+.info-card a { color: var(--sky-deep); font-weight: 800; word-break: break-all; }
+.info-close {
+  position: absolute; top: .4em; right: .4em;
+  width: 2em; height: 2em; border-radius: 50%;
+  background: #eef3fa; color: var(--ink);
+  font-size: 1.3em; font-weight: 800; line-height: 1;
+}
+
+/* The landing page has no Back/Next buttons; "Let's go!" is the way in. */
+body.is-home .nav-btn.back,
+body.is-home .nav-btn.next { display: none; }
+
+/* 3D background (harness/landing3d.js). Without WebGL, the CSS sky, hill and bubbles show instead. */
+#bg3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+body.has-3d #landing { background: linear-gradient(#59ccff, #b9ecff 75%); }
+body.has-3d .bubbles { display: none; }
+/* Only the buttons in the title area catch taps. */
+.landing-inner { pointer-events: none; }
+.landing-inner button { pointer-events: auto; }
+
+/* Floating bubbles */
+.bubbles span {
+  position: absolute; bottom: -20vmin;
+  width: 12vmin; height: 12vmin; border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  animation: rise 11s linear infinite;
+}
+.bubbles span:nth-child(1) { left: 6%;  animation-delay: 0s;   background: rgba(255,210,63,.55); }
+.bubbles span:nth-child(2) { left: 22%; animation-delay: -4s;  width: 7vmin;  height: 7vmin; }
+.bubbles span:nth-child(3) { left: 38%; animation-delay: -8s;  background: rgba(255,93,143,.45); }
+.bubbles span:nth-child(4) { left: 57%; animation-delay: -2s;  width: 9vmin;  height: 9vmin; }
+.bubbles span:nth-child(5) { left: 72%; animation-delay: -6s;  background: rgba(155,93,229,.4); }
+.bubbles span:nth-child(6) { left: 86%; animation-delay: -9s;  width: 6vmin;  height: 6vmin; }
+.bubbles span:nth-child(7) { left: 93%; animation-delay: -3s;  background: rgba(61,220,132,.45); }
+@keyframes rise {
+  from { transform: translateY(0) translateX(0); }
+  50%  { transform: translateY(-65vh) translateX(3vmin); }
+  to   { transform: translateY(-130vh) translateX(-3vmin); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo img, .go, .bubbles span, .oops-cloud { animation: none; }
+  #stage > * { transition: none; }
+}

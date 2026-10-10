@@ -1,0 +1,70 @@
+Nogglebox License
+
+Copyright (c) 2026 John Hayes. All rights reserved.
+
+A note on this license: we haven't decided yet what Nogglebox's final license will be. Until we
+do, this is deliberately the most restrictive license we can use: everything is reserved, and
+the only permission given is to prepare contributions. That keeps every option open. Because
+contributors hand over their rights (section 2), we can move to a different license later,
+including a more open one, without having to track down every contributor for permission.
+
+This repository contains the Nogglebox website: its code, pages, videos, recordings, artwork
+and text (together, "Nogglebox"). Nogglebox is not open source. Except as stated below, no one
+may copy, modify, distribute, publish or otherwise use any part of it without written
+permission from the copyright holder.
+
+
+1. Permission to contribute
+
+You may view this repository, make a copy (including a GitHub fork), and modify that copy, but
+only to prepare a contribution to be submitted back to this repository, for example as a pull
+request. This permission does not cover publishing, hosting or distributing Nogglebox or any
+modified version of it.
+
+
+2. Contributions
+
+A "contribution" is anything you submit for inclusion in Nogglebox, such as a page, video,
+recording, image, text, or code change, whether by pull request or any other means.
+
+By submitting a contribution, you agree that:
+
+ (a) Assignment. You assign to the copyright holder all of your right, title and interest,
+     including all copyright, in your contribution, worldwide.
+
+ (b) License, where assignment isn't possible. If any right cannot be assigned under the
+     applicable law, you grant the copyright holder an exclusive, perpetual, irrevocable,
+     worldwide, royalty-free license to use, copy, modify, publish, distribute, sublicense and
+     otherwise exploit your contribution in any way, without credit or payment to you.
+
+ (c) Moral rights. To the fullest extent permitted by law, you waive, and agree not to assert,
+     any moral rights in your contribution, including any right to be credited or to object to
+     changes.
+
+ (d) Your promises. You promise that:
+       - the contribution is your own original work, or you otherwise have the right to make
+         this agreement for all of it;
+       - it does not infringe anyone else's rights;
+       - every identifiable person who appears in it (in video, photos or recordings) has
+         agreed to its use on Nogglebox, and for anyone under 18, a parent or legal guardian
+         has given that consent;
+       - it contains no personal information beyond what those people agreed to share.
+
+ (e) No obligation. The copyright holder may accept, change or reject any contribution, or
+     remove it later, at any time and without explanation, and is not required to use it or
+     to credit you.
+
+
+3. Third-party material
+
+Some files in this repository belong to others and are covered by their own licenses, not by
+this one. These include the libraries in vendor/ (see vendor/VERSIONS.txt and the notices in
+each file), the Baloo 2 font in shared/fonts/ (SIL Open Font License, see shared/fonts/OFL.txt),
+and images credited in 8/img/CREDITS.md. Nothing here restricts your rights to those files under
+their own licenses.
+
+
+4. No warranty
+
+Nogglebox is provided "as is", without warranty of any kind, express or implied. The copyright
+holder is not liable for any claim, damages or other liability arising from it.
