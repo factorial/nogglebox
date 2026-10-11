@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Memory Match</title>
-  <link rel="stylesheet" href="../shared/page.css">
-  <script src="../shared/kit.js"></script>
+  <link rel="stylesheet" href="../../shared/page.css">
+  <script src="../../shared/kit.js"></script>
   <style>
     body { background: radial-gradient(circle at 50% 30%, #e9fbff, #b9ecff); }
 
@@ -135,7 +135,7 @@
           Kit.tone(660, 0.15, { type: "triangle", volume: 0.2 });
           Kit.tone(990, 0.22, { type: "triangle", volume: 0.2, delay: 0.12 });
           const word = a.name.charAt(0).toUpperCase() + a.name.slice(1) + "!";
-          // TODO voice actor: record each picture's name as 10/audio/<name>.mp3
+          // TODO voice actor: record each picture's name as pages/10/audio/<name>.mp3
           // (dog.mp3, cat.mp3 … apple.mp3 … fire-truck.mp3); the full list is in SETS above.
           Kit.say(word, { audio: "audio/" + a.name.replace(/ /g, "-") + ".mp3" });
           if (++matches === PAIRS) win();

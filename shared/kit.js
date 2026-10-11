@@ -1,5 +1,5 @@
 // Kit: shared helpers for every sub-page. Include it first in <head>:
-//   <script src="../shared/kit.js"></script>
+//   <script src="../../shared/kit.js"></script>
 //
 //   Kit.use("gsap", "three", ...)   -> Promise of { gsap, THREE, ... }  (vendored libs, cached)
 //   Kit.video(src, opts)            -> full-screen autoplay <video>, no controls

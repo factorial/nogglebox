@@ -100,7 +100,7 @@
   let shownId = null;
   let navToken = 0;
 
-  function pageUrl(id) { return id + "/index.html"; }
+  function pageUrl(id) { return "pages/" + id + "/index.html"; }
 
   function setHash(id) {
     const h = id == null ? location.pathname + location.search : "#/" + id;
@@ -235,7 +235,7 @@
     player.className = page.fit === "cover" ? "cover" : "";
     player.loop = !!page.loop;
     player.muted = false;
-    player.src = page.id + "/" + page.video;
+    player.src = "pages/" + page.id + "/" + page.video;
     player.onerror = () => { if (token === navToken) showOops(page.id, "video couldn't load: " + player.src); };
     // When the video finishes, move on to the next page after a short beat.
     // (Same <video> element as the tap that started it, so the next video may play with sound.)

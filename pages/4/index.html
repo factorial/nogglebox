@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Letter Tracing</title>
-  <link rel="stylesheet" href="../shared/page.css">
-  <script src="../shared/kit.js"></script>
+  <link rel="stylesheet" href="../../shared/page.css">
+  <script src="../../shared/kit.js"></script>
   <style>
     body {
       background: radial-gradient(circle at 50% 35%, #ffffff, #dff3ff 70%);
@@ -223,7 +223,7 @@
     const STORE = "tracing.done";
     let finished = new Map(); // letter → color it was traced in
     try { finished = new Map(JSON.parse(localStorage.getItem(STORE) || "[]")); } catch (_) {}
-    // Testing: open 4/index.html?almost to have every letter but one already done.
+    // Testing: open pages/4/index.html?almost to have every letter but one already done.
     if (new URLSearchParams(location.search).has("almost")) {
       finished = new Map(ALPHABET.slice(1).map((l) => [l, COLORS[Math.floor(Math.random() * COLORS.length)]]));
     }
@@ -422,7 +422,7 @@
         Kit.tone(f, d + 0.1, { type: "triangle", volume: 0.18, delay: t });
       });
       setTimeout(() => {
-        // TODO voice actor: record "You did the whole alphabet!" as 4/audio/whole-alphabet.mp3
+        // TODO voice actor: record "You did the whole alphabet!" as pages/4/audio/whole-alphabet.mp3
         Kit.say("You did the whole alphabet!", { audio: "audio/whole-alphabet.mp3", pitch: 1.4, rate: 1 });
       }, 2900);
 

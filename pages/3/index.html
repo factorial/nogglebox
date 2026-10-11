@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Shape Sides</title>
-  <link rel="stylesheet" href="../shared/page.css">
-  <script src="../shared/kit.js"></script>
+  <link rel="stylesheet" href="../../shared/page.css">
+  <script src="../../shared/kit.js"></script>
   <style>
     body {
       background: radial-gradient(circle at 50% 40%, #fff8d6, #ffe08a);
@@ -146,7 +146,7 @@
 
       // Say the shape's name once its sides have drawn in, including "circle" when the page opens.
       timers.push(setTimeout(() => {
-        // TODO voice actor: record each shape name as 3/audio/<name>.mp3
+        // TODO voice actor: record each shape name as pages/3/audio/<name>.mp3
         // (circle.mp3, half-circle.mp3, triangle.mp3, square.mp3 … octagon.mp3)
         Kit.say(NAMES[count] + "!", { audio: "audio/" + NAMES[count].replace(" ", "-") + ".mp3" });
       }, 120 + g.sides.length * SIDE_MS + 150));

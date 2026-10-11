@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Usage:
-#   ./new-page.sh "Page Title"                  interactive page: copies _template/ to /<next id>/
-#   ./new-page.sh "Page Title" path/to/clip.mp4  video page: copies the video to /<next id>/
+#   ./new-page.sh "Page Title"                  interactive page: copies _template/ to pages/<next id>/
+#   ./new-page.sh "Page Title" path/to/clip.mp4  video page: puts the video in pages/<next id>/
 # Either way, the page is appended to pages.js.
 set -euo pipefail
 cd "$(dirname "$0")"
 title="${1:?Usage: ./new-page.sh \"Page Title\" [video.mp4]}"
 video="${2:-}"
 
-last=$(ls -d [0-9]*/ 2>/dev/null | tr -d / | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
+mkdir -p pages
+last=$(cd pages && ls -d [0-9]*/ 2>/dev/null | tr -d / | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
 id=$(( ${last:-0} + 1 ))
-if [ -e "$id" ]; then echo "Refusing to overwrite existing folder $id/" >&2; exit 1; fi
+dir="pages/$id"
+if [ -e "$dir" ]; then echo "Refusing to overwrite existing folder $dir/" >&2; exit 1; fi
 
 js_title=$(printf '%s' "$title" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
 if [ -n "$video" ]; then
@@ -18,7 +20,7 @@ if [ -n "$video" ]; then
   # Video pages always get converted and volume-leveled, which needs ffmpeg.
   command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null \
     || { echo "Adding a video needs ffmpeg (install it with: brew install ffmpeg)" >&2; exit 1; }
-  mkdir "$id"
+  mkdir "$dir"
   # Convert to H.264/AAC .mp4, the one format every browser plays. (iPhone .mov files are
   # usually HEVC, which Chrome and Firefox often can't play.) "faststart" lets playback
   # begin before the whole file has downloaded.
@@ -31,8 +33,8 @@ if [ -n "$video" ]; then
   kbps=$(ffprobe -v error -show_entries format=bit_rate -of csv=p=0 "$video" | awk '{printf "%d", $1/1000}')
   if [[ "$codecs" =~ h264,video,yuv420p ]] && { [[ "$codecs" =~ aac,audio ]] || [[ ! "$codecs" =~ audio ]]; } && (( kbps <= 8000 )); then
     echo "Video is already web-friendly; repackaging without re-encoding..."
-    ffmpeg -hide_banner -loglevel error -i "$video" -map 0:v:0 -map "0:a:0?" -c copy -write_tmcd 0 -movflags +faststart "$id/$name" \
-      || { rm -rf "$id"; echo "Video repackaging failed" >&2; exit 1; }
+    ffmpeg -hide_banner -loglevel error -i "$video" -map 0:v:0 -map "0:a:0?" -c copy -write_tmcd 0 -movflags +faststart "$dir/$name" \
+      || { rm -rf "$dir"; echo "Video repackaging failed" >&2; exit 1; }
   else
     echo "Converting video for the web (this can take a minute)..."
     (( kbps > 8000 )) && echo "  (it's ${kbps} kbit/s, too heavy to stream smoothly, so it's being made lighter)"
@@ -41,17 +43,17 @@ if [ -n "$video" ]; then
       -vf "scale='min(1920,iw)':-2" \
       -c:a aac -b:a 160k -ac 2 \
       -write_tmcd 0 -movflags +faststart \
-      "$id/$name" || { rm -rf "$id"; echo "Video conversion failed" >&2; exit 1; }
+      "$dir/$name" || { rm -rf "$dir"; echo "Video conversion failed" >&2; exit 1; }
   fi
   # Always bring its sound to the site's standard loudness, so no video is louder or quieter
   # than the rest. If that fails, don't leave a half-made page behind.
-  ./normalize-audio.sh "$id/$name" || { rm -rf "$id"; echo "Volume leveling failed; no page was added" >&2; exit 1; }
+  ./normalize-audio.sh "$dir/$name" || { rm -rf "$dir"; echo "Volume leveling failed; no page was added" >&2; exit 1; }
   js_name=$(printf '%s' "$name" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
   entry="  { id: $id, title: \"$js_title\", video: \"$js_name\" },"
 else
-  cp -R _template/ "$id/"
+  cp -R _template/ "$dir/"
   esc_title=$(printf '%s' "$title" | sed -e 's/[&|\\]/\\&/g')
-  sed -i.bak "s|__TITLE__|$esc_title|g" "$id/index.html" && rm "$id/index.html.bak"
+  sed -i.bak "s|__TITLE__|$esc_title|g" "$dir/index.html" && rm "$dir/index.html.bak"
   entry="  { id: $id, title: \"$js_title\" },"
 fi
 

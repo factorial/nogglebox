@@ -35,7 +35,7 @@ index.html, harness/   The shell: landing page, Next/Back buttons, transitions,
                        and the friendly "oops" screen if a page breaks
 site.js                Site name and settings
 pages.js               The list of pages
-1/, 2/, 3/ …           One folder per page, named by its number
+pages/1/, pages/2/ …   One folder per page, named by its number
 shared/kit.js          Helpers every page uses (sound, speech, video, libraries, errors)
 shared/page.css        Base styles every page uses
 _template/             Starting point for a new page
@@ -61,7 +61,7 @@ Check [CURRICULUM.md](CURRICULUM.md) for the subject areas and ideas. Areas with
 ./new-page.sh "How Crayons Are Made" ~/Movies/crayons.mov
 ```
 
-This converts the video to a web-friendly `.mp4` (it needs [ffmpeg](https://ffmpeg.org)), evens out its volume to match the rest of the site, puts it in the next numbered folder, and adds it to `pages.js`. Video pages play full-screen with sound as soon as a child lands on them, and go on to the next page when they finish.
+This converts the video to a web-friendly `.mp4` (it needs [ffmpeg](https://ffmpeg.org)), evens out its volume to match the rest of the site, puts it in the next numbered folder in `pages/`, and adds it to `pages.js`. Video pages play full-screen with sound as soon as a child lands on them, and go on to the next page when they finish.
 
 We want this app to be at least 50% videos. Videos should be relatively short. Example videos would be animations, musicals, interviews with children, puppets talking with adults. Think 70s Sesame Street content.
 
@@ -71,14 +71,14 @@ We want this app to be at least 50% videos. Videos should be relatively short. E
 ./new-page.sh "Animal Sounds"
 ```
 
-This creates the next numbered folder (e.g. `8/index.html`) from `_template/` and adds it to `pages.js`. Build your page in that `index.html`. Images, sounds and other files for the page go in the same folder.
+This creates the next numbered folder (e.g. `pages/14/index.html`) from `_template/` and adds it to `pages.js`. Build your page in that `index.html`. Images, sounds and other files for the page go in the same folder.
 
 
 ### 3. Tag it
 In `pages.js`, add the curriculum areas your page teaches:
 
 ```js
-{ id: 8, title: "Animal Sounds", areas: ["science", "music"] },
+{ id: 14, title: "Animal Sounds", areas: ["science", "music"] },
 ```
 
 Then update the coverage table at the bottom of `CURRICULUM.md`.
@@ -168,7 +168,7 @@ Kit.say("Find the red apple!", { audio: "audio/find-red-apple.mp3" });
 
 | Option | What it does |
 |---|---|
-| `audio` | A recorded file to play instead of the built-in voice. The path is relative to your page's folder, so `"audio/hi.mp3"` means `8/audio/hi.mp3` for page 8. Use `.mp3` (or `.m4a`); every browser plays them. If the file is missing or won't play, the built-in voice reads `text` instead, and a warning is logged to the console. |
+| `audio` | A recorded file to play instead of the built-in voice. The path is relative to your page's folder, so `"audio/hi.mp3"` means `pages/14/audio/hi.mp3` for page 14. Use `.mp3` (or `.m4a`); every browser plays them. If the file is missing or won't play, the built-in voice reads `text` instead, and a warning is logged to the console. |
 | `rate`, `pitch` | Speed and pitch for the built-in voice (defaults `0.9` and `1.2`). Ignored when a recording plays. |
 | `interrupt` | By default, a new line cuts off whatever is still being said. Pass `false` to let the current line finish first; the new one waits its turn. |
 
@@ -188,7 +188,7 @@ Pages can speak as soon as they open, before the child has touched them. Browser
 Write every spoken line so it's either got a voice file or is ready for one: for each `Kit.say` that is lacking an audio file, add a `TODO voice actor` comment
 
 ```js
-// TODO voice actor: record "Find the red apple!" as 8/audio/find-red-apple.mp3
+// TODO voice actor: record "Find the red apple!" as pages/14/audio/find-red-apple.mp3
 Kit.say("Find the red apple!", { audio: "audio/find-red-apple.mp3" });
 ```
 

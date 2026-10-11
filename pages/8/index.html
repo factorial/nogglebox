@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Powers of Ten</title>
-  <link rel="stylesheet" href="../shared/page.css">
-  <script src="../shared/kit.js"></script>
+  <link rel="stylesheet" href="../../shared/page.css">
+  <script src="../../shared/kit.js"></script>
   <style>
     body { background: #000; cursor: pointer; }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -102,7 +102,7 @@
                    THINGS[k][0].toUpperCase() + THINGS[k].slice(1) + "!";
       // TODO voice actor: record each level's line ("One meter! About as long as a dog!", "Ten meters!
       // About as wide as a house!" … up to "One octillion meters! About as wide as all of the universe
-      // we can see!") as 8/audio/levels/0.mp3 … 27.mp3; see THINGS for every line.
+      // we can see!") as pages/8/audio/levels/0.mp3 … 27.mp3; see THINGS for every line.
       Kit.say(line, { audio: "audio/levels/" + k + ".mp3", rate: 1 });
     }
 

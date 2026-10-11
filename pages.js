@@ -1,11 +1,11 @@
 // The list of pages. The order doesn't affect navigation: Next always picks a random page
 // (except when replaying history after going Back), so kids never step through it in order.
-// Each page lives in its own folder named by its integer id: /<id>/index.html
+// Each page lives in its own folder named by its integer id: pages/<id>/index.html
 // IDs are permanent (never reuse one); reorder this list freely.
 // `areas` tags what each page teaches; see CURRICULUM.md for the list of areas.
 // To add a page: ./new-page.sh "Title"   (copies _template/ and appends here)
 //
-// Video pages: { id: 6, title: "Bubbles", video: "bubbles.mp4" } plays /6/bubbles.mp4
+// Video pages: { id: 6, title: "Bubbles", video: "bubbles.mp4" } plays pages/6/bubbles.mp4
 // full-screen with sound the moment the kid lands on it (no index.html needed).
 // Optional: fit: "cover" (fill the screen, cropping edges), loop: true.
 // Add one with: ./new-page.sh "Bubbles" ~/Movies/bubbles.mp4

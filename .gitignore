@@ -36,8 +36,8 @@ service-account*.json
 
 # ---------- Local-only tools and source material ----------
 # Sound It Out: raw voice recordings and the script that processes them stay on this computer;
-# only the processed results (5/audio/words/*.mp3 and index.js) are kept.
-5/audio/raw/
+# only the processed results (pages/5/audio/words/*.mp3 and index.js) are kept.
+pages/5/audio/raw/
 split-sounds.sh
 
 # ---------- Junk that shouldn't be shared ----------

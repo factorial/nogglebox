@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Math Box</title>
-  <link rel="stylesheet" href="../shared/page.css">
-  <script src="../shared/kit.js"></script>
+  <link rel="stylesheet" href="../../shared/page.css">
+  <script src="../../shared/kit.js"></script>
   <style>
     :root {
       --top: max(18vh, calc(var(--nav-btn) * 0.72 + 5vmin));
@@ -39,11 +39,7 @@
     }
     #box.glow { animation: glow 900ms ease-out; }
     @keyframes glow { 30% { box-shadow: 0 0 0 2vmin rgba(61,220,132,.6); } }
-    #outside {
-      left: calc(50% + 1.5vmin); right: 3vmin;
-      border: max(4px, .7vmin) dashed rgba(255,159,28,.55);
-      border-radius: 4vmin;
-    }
+    #outside { left: calc(50% + 1.5vmin); right: 3vmin; }
     .count {
       position: absolute; top: 0; left: 50%;
       transform: translate(-50%, -55%);
@@ -72,6 +68,20 @@
     .item > span { display: block; transition: transform 150ms; }
     .item.dragging > span { transform: scale(1.25); }
     .item.cheer > span { animation: cheer 700ms cubic-bezier(.3,1.6,.5,1); }
+    /* Hint: an item scoots over and bumps against the box's side (twice), squishing a little
+       on contact, to show where it wants to go. --dx is set in JS to reach the box's wall. */
+    .item.bump-in  > span { transform-origin: left center;  animation: hint-bump 1.4s ease-in-out; }
+    .item.bump-out > span { transform-origin: right center; animation: hint-bump 1.4s ease-in-out; }
+    @keyframes hint-bump {
+      0%   { transform: translateX(0); }
+      28%  { transform: translateX(var(--dx)); }
+      34%  { transform: translateX(var(--dx)) scaleX(.8); }
+      44%  { transform: translateX(calc(var(--dx) * .78)); }
+      58%  { transform: translateX(var(--dx)); }
+      63%  { transform: translateX(var(--dx)) scaleX(.84); }
+      76%  { transform: translateX(calc(var(--dx) * .55)); }
+      100% { transform: translateX(0); }
+    }
     @keyframes cheer { 40% { transform: translateY(-30%) scale(1.25) rotate(-10deg); } }
   </style>
 </head>
@@ -88,7 +98,7 @@
 
     const $ = (id) => document.getElementById(id);
     const box = $("box"), outside = $("outside");
-    let items = [], target = 0, solved = false;
+    let items = [], target = 0, solved = false, adding = true;
 
     // ---------- problems ----------
     const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -100,6 +110,7 @@
       $("ans").classList.remove("solved");
 
       const add = Math.random() < 0.5;
+      adding = add;
       let a, b;
       if (add) { a = rand(1, 9); b = rand(1, Math.min(5, SLOTS - a)); }   // sums up to 12
       else     { a = rand(1, 10); b = rand(1, Math.min(5, a)); }          // answers can be 0
@@ -112,6 +123,34 @@
       for (let i = 0; i < a; i++) makeItem(thing, "in", i);
       if (add) for (let i = 0; i < b; i++) makeItem(thing, "out", i);
       layout(true);
+      scheduleHint(1200);
+    }
+
+    // ---------- hint: show which way things should go ----------
+    // Adding: an item outside bumps against the box's side, wanting in.
+    // Taking away: an item inside bumps against the box's wall, wanting out.
+    // It repeats every few seconds until the child moves something, then waits a while.
+    let hintTimer = null, hinting = null;
+    function stopHint() {
+      clearTimeout(hintTimer);
+      if (hinting) { hinting.el.classList.remove("bump-in", "bump-out"); hinting = null; }
+    }
+    function scheduleHint(delay) { stopHint(); hintTimer = setTimeout(hint, delay); }
+    function hint() {
+      if (solved) return;
+      const pool = items.filter((i) => i.where === (adding ? "out" : "in") && !i.drag);
+      if (!pool.length) return;
+      const x = (i) => i.el.getBoundingClientRect().left;
+      const it = pool.reduce((a, b) => (adding ? (x(b) < x(a) ? b : a) : (x(b) > x(a) ? b : a))); // the one nearest the wall
+      const r = it.el.getBoundingClientRect(), b = box.getBoundingClientRect();
+      const wall = parseFloat(getComputedStyle(box).borderRightWidth) || 0;
+      const inset = r.width * 0.08;  // the emoji is a little narrower than its square
+      const dx = adding ? b.right - (r.left + inset) : (b.right - wall) - (r.right - inset);
+      it.el.style.setProperty("--dx", dx + "px");
+      const cls = adding ? "bump-in" : "bump-out";
+      it.el.classList.remove(cls); void it.el.offsetWidth; it.el.classList.add(cls);
+      hinting = it;
+      hintTimer = setTimeout(() => { it.el.classList.remove(cls); hinting = null; hintTimer = setTimeout(hint, 1600); }, 1400);
     }
 
     function makeItem(thing, where, slot) {
@@ -181,6 +220,7 @@
       el.addEventListener("pointerdown", (e) => {
         if (solved || it.drag) return;
         e.preventDefault();
+        stopHint();
         try { el.setPointerCapture(e.pointerId); } catch (_) {}
         const p = slotXY(it.where, it.slot);
         it.drag = { id: e.pointerId, dx: e.clientX - p.x, dy: e.clientY - p.y, sx: e.clientX, sy: e.clientY, moved: false, size: p.size };
@@ -210,6 +250,7 @@
         if (slot >= 0) { it.where = to; it.slot = slot; }
         layout();
         if (it.where !== from) moved(it.where);
+        else if (!solved) scheduleHint(4000); // put back where it was: hint again after a while
       };
       el.addEventListener("pointerup", drop);
       el.addEventListener("pointercancel", drop);
@@ -220,13 +261,15 @@
       // A little musical step: higher as the box fills up
       Kit.tone(300 * Math.pow(2, nIn / 12), 0.16, { type: "triangle", volume: 0.22 });
       // Count out loud how many are in the box now (a new count cuts off the previous one).
-      // TODO voice actor: record the numbers 0–12 as 7/audio/numbers/0.mp3 … 12.mp3
+      // TODO voice actor: record the numbers 0–12 as pages/7/audio/numbers/0.mp3 … 12.mp3
       Kit.say(String(nIn), { audio: "audio/numbers/" + nIn + ".mp3", rate: 1 });
       if (nIn === target && !solved) win();
+      else scheduleHint(5000);
     }
 
     async function win() {
       solved = true;
+      stopHint();
       $("ans").textContent = target;
       $("ans").classList.add("solved");
       box.classList.remove("glow"); void box.offsetWidth; box.classList.add("glow");

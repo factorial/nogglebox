@@ -285,14 +285,14 @@ if fetch "https://$DOMAIN/shared/kit.js" 200; then ok "shared helpers (shared/ki
 else bad "shared helpers (shared/kit.js)"; fi
 PAGE=$(grep -E '^[[:space:]]*\{ id: [0-9]+' pages.js | grep -v 'video:' | head -1 | sed -E 's/.*id: ([0-9]+).*/\1/')
 if [[ -n "$PAGE" ]]; then
-  if fetch "https://$DOMAIN/$PAGE/index.html" 200 && grep -q "shared/kit.js" "$TMP/body"; then ok "an interactive page ($PAGE/)"
+  if fetch "https://$DOMAIN/pages/$PAGE/index.html" 200 && grep -q "shared/kit.js" "$TMP/body"; then ok "an interactive page (pages/$PAGE/)"
   else bad "interactive page $PAGE/"; fi
 fi
 
 # A video must stream in pieces (range requests; Safari won't play it otherwise), cached long-term
 VIDEO=$(grep -E '^[[:space:]]*\{ id: [0-9]+' pages.js | grep 'video: "' | head -1 | sed -E 's/.*id: ([0-9]+).*video: "([^"]+)".*/\1\/\2/')
 if [[ -n "$VIDEO" ]]; then
-  if fetch "https://$DOMAIN/$VIDEO" 206 -r 0-1023; then ok "videos stream ($VIDEO)"
+  if fetch "https://$DOMAIN/pages/$VIDEO" 206 -r 0-1023; then ok "videos stream ($VIDEO)"
   else bad "video $VIDEO doesn't stream"; fi
   if header cache-control | grep -qi "immutable"; then ok "videos are cached long-term"
   else bad "video cache header: $(header cache-control)"; fi

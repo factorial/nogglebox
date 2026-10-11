@@ -1,4 +1,4 @@
-// Words for Sound It Out, shared by the page (5/index.html) and the recording splitter
+// Words for Sound It Out, shared by the page (pages/5/index.html) and the recording splitter
 // (split-sounds.sh), so the two always agree.
 //
 // Each word is split into its sounds, one tile per sound. Usually that's one letter each, but
