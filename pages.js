@@ -22,4 +22,5 @@ window.PAGES = [
   { id: 11, title: "Bus Stop", video: "bus.mp4", areas: ["community"] },
   { id: 12, title: "The Cork Puppet Sings the ABCs", video: "img-1650.mp4", areas: ["letters", "music"] },
   { id: 13, title: "Flip Book Dance", video: "flip-book-dance.mp4", areas: ["art"] },
+  { id: 14, title: "Zoo Trip", video: "zoo-trip.mp4", areas: ["science"] },
 ];

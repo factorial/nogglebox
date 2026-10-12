@@ -134,7 +134,7 @@ A page can have several areas. The harness ignores the tags; they exist to keep 
 | math | Falling Numbers (1), Shape Sides (3), Math Box (7), Powers of Ten (8) |
 | feelings | none yet |
 | thinking | Memory Match (10) |
-| science | Powers of Ten (8) |
+| science | Powers of Ten (8), Zoo Trip (14, video) |
 | community | Bus Stop (11, video) |
 | health | none yet |
 | music | Piano (6), The Cork Puppet Sings the ABCs (12, video) |

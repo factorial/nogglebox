@@ -11,6 +11,7 @@ Static site, no build step. Audience: pre-K kids, mostly on tablets. The site is
 ## Layout
 - `index.html` + `harness/` — the shell. Shows the landing page, or loads a sub-page in an iframe (`/#/<id>`). Handles Next/Back, slide transitions, and the friendly error screen.
 - `site.js` — the site's name (logo, tab titles, spoken greeting). Rename the site here, plus `manifest.webmanifest`.
+- `RESEARCH.md` — short lessons learned while building, each with its source (or "Observed"). Add to it when we learn something worth keeping.
 - `CURRICULUM.md` — subject areas, learning goals, page ideas, and coverage. Tag new pages with `areas` and update its coverage table.
 - `pages.js` — the page list (`{ id, title, areas }`). Its order doesn't affect navigation. IDs are permanent integers; never reuse one.
 - `pages/<id>/index.html` — one folder per page (e.g. `pages/1/`, `pages/2/`). Self-contained; put its assets (videos, images) in the same folder. Shared files are two levels up (`../../shared/`).
@@ -20,7 +21,7 @@ Static site, no build step. Audience: pre-K kids, mostly on tablets. The site is
 
 ## Adding a page
 - Interactive: `./new-page.sh "Title"` → creates the next numbered folder in `pages/` from `_template/` and appends it to `pages.js`. Then edit `pages/<id>/index.html`.
-- Video: `./new-page.sh "Title" path/to/clip.mov` → converts it to a web-friendly H.264 .mp4 (needs ffmpeg) in the next numbered folder in `pages/` and adds `{ id, title, video }` to `pages.js`. The harness plays these itself (not in an iframe) on one reused `<video>` element, calling `play()` inside the Next/Back tap so sound is allowed in every browser. Optional `fit: "cover"`, `loop: true`. Its sound is normalized to the site's standard loudness (-21 LUFS) by `normalize-audio.sh`, which can also be run on any video by hand.
+- Video: `./new-page.sh "Title" path/to/clip.mov` → converts it to a web-friendly H.264 .mp4 (needs ffmpeg; long side ≤1280 px, ≤30 fps, bitrate capped; already-compliant videos are repackaged untouched; warns near GitHub's 100 MB limit) in the next numbered folder in `pages/` and adds `{ id, title, video }` to `pages.js`. The harness plays these itself (not in an iframe) on one reused `<video>` element, calling `play()` inside the Next/Back tap so sound is allowed in every browser. Optional `fit: "cover"`, `loop: true`. Its sound is normalized to the site's standard loudness (-21 LUFS) by `normalize-audio.sh`, which can also be run on any video by hand.
 - Nav buttons fire on `click`, not `pointerdown`: a touch only counts as a user gesture (needed for sound/speech) when the finger lifts.
 
 ## Sound It Out recordings (page 5)
