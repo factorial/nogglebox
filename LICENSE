@@ -2,24 +2,24 @@ Nogglebox License
 
 Copyright (c) 2026 John Hayes. All rights reserved.
 
-A note on this license: we haven't decided yet what Nogglebox's final license will be. Until we
-do, this is deliberately the most restrictive license we can use: everything is reserved, and
-the only permission given is to prepare contributions. That keeps every option open. Because
-contributors hand over their rights (section 2), we can move to a different license later,
-including a more open one, without having to track down every contributor for permission.
-
 This repository contains the Nogglebox website: its code, pages, videos, recordings, artwork
-and text (together, "Nogglebox"). Nogglebox is not open source. Except as stated below, no one
-may copy, modify, distribute, publish or otherwise use any part of it without written
-permission from the copyright holder.
+and text (together, "Nogglebox"). Nogglebox is source-available, not open source: anyone may
+read it, run it on their own devices and contribute to it, but only the copyright holder
+publishes it. Except as stated below, no one may copy, modify, distribute, publish or otherwise
+use any part of it without written permission from the copyright holder.
 
 
-1. Permission to contribute
+1. Permission to contribute and to run locally
 
-You may view this repository, make a copy (including a GitHub fork), and modify that copy, but
-only to prepare a contribution to be submitted back to this repository, for example as a pull
-request. This permission does not cover publishing, hosting or distributing Nogglebox or any
-modified version of it.
+You may view this repository, fork it (on GitHub or elsewhere), and run and modify copies of it
+on your own devices, for example with ./serve.sh, to build, test and preview contributions, and
+for your own private, non-public use.
+
+You may not make Nogglebox, any modified version of it, or any part of it (its pages, videos,
+recordings, artwork, text or code) available to anyone else without written permission from
+the copyright holder. That includes hosting it on a public website or server, publishing it as
+an app, and distributing copies. Contributions reach the public only by being accepted into this
+repository and published by the copyright holder.
 
 
 2. Contributions

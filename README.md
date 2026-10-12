@@ -209,7 +209,7 @@ Browsers only allow sound in a video to play after a user has tapped something. 
 
 ## License and contributing
 
-Nogglebox is not open source; see [LICENSE](LICENSE). You're welcome to fork this repository to build a page and send it back as a pull request. **By submitting a contribution, you hand over all rights to it** (see section 2 of the license). You also confirm it's your own work, and that everyone who appears in it agreed to be included; for children, that means a parent or guardian.
+Nogglebox is source-available, not open source; see [LICENSE](LICENSE). You're welcome to fork this repository, run it on your own computer, and build a page to send back as a pull request. You may not host your own copy of Nogglebox, or any part of it, anywhere public; accepted contributions go live on Nogglebox itself. **By submitting a contribution, you hand over all rights to it** (see section 2 of the license). You also confirm it's your own work, and that everyone who appears in it agreed to be included; for children, that means a parent or guardian.
 
 ## Third-party libraries
 
