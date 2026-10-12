@@ -59,6 +59,26 @@
       from { opacity: .9; transform: translate(-50%, -50%) scale(.3); }
       to   { opacity: 0;  transform: translate(calc(-50% + var(--dx)), calc(-50% + 6vmin)) scale(1.8); }
     }
+
+    /* The zero: tap it and it vanishes in a silent cloud of gas */
+    .num.vanish > span { animation: vanish 380ms ease-in forwards; }
+    @keyframes vanish {
+      30%  { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    .gas {
+      position: absolute; left: 0; top: 0;
+      width: var(--r); height: var(--r);
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #e3f5c4, #b9dc8a 70%);
+      pointer-events: none;
+      animation: gas 1.4s ease-out forwards;
+    }
+    @keyframes gas {
+      0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.2); }
+      20%  { opacity: .95; }
+      100% { opacity: 0;   transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.6); }
+    }
   </style>
 </head>
 <body>
@@ -185,8 +205,53 @@
       el.addEventListener("pointerdown", (e) => { e.preventDefault(); tapped(n); });
     }
 
+    // ---------- the occasional zero ----------
+    // Now and then a 0 falls too. Tapping it makes it vanish in a puff of gas, with no sound
+    // (zero toots!). If nobody taps it, it just falls away; another comes along later.
+    let zeroTimer = null;
+    function scheduleZero() { clearTimeout(zeroTimer); zeroTimer = setTimeout(spawnZero, 6000 + Math.random() * 8000); }
+    function spawnZero() {
+      if (nums.some((n) => n.v === 0)) return scheduleZero();
+      const el = document.createElement("div");
+      el.className = "num";
+      el.innerHTML = "<span>0</span>";
+      el.style.color = "#8d99ae";
+      document.body.appendChild(el);
+      const z = { v: 0, el, busy: false };
+      nums.push(z);
+      respawn(z, -size() * 1.1);
+      el.addEventListener("pointerdown", (e) => { e.preventDefault(); tapped(z); });
+    }
+    function removeZero(z) {
+      const i = nums.indexOf(z);
+      if (i >= 0) nums.splice(i, 1);
+      z.el.remove();
+      scheduleZero();
+    }
+    function vanish(z) {
+      z.busy = true;
+      z.el.classList.add("vanish");
+      const s = size(), cx = z.x + s * 0.36, cy = z.y + s * 0.5;
+      for (let i = 0; i < 7; i++) {
+        const g = document.createElement("div");
+        g.className = "gas";
+        const a = Math.random() * Math.PI * 2, d = s * (0.15 + Math.random() * 0.35);
+        g.style.left = cx + Math.cos(a) * d * 0.5 + "px";
+        g.style.top = cy + Math.sin(a) * d * 0.5 + "px";
+        g.style.setProperty("--r", s * (0.35 + Math.random() * 0.35) + "px");
+        g.style.setProperty("--dx", Math.cos(a) * d + "px");
+        g.style.setProperty("--dy", Math.sin(a) * d - s * 0.4 + "px"); // gas drifts upward
+        g.style.animationDelay = i * 40 + "ms";
+        document.body.appendChild(g);
+        setTimeout(() => g.remove(), 1500 + i * 40);
+      }
+      setTimeout(() => removeZero(z), 400);
+    }
+    scheduleZero();
+
     function tapped(n) {
       if (n.busy) return;
+      if (n.v === 0) return vanish(n);
       n.busy = true;
       const s = size();
       for (let i = 0; i < n.v; i++) {
@@ -220,7 +285,10 @@
         if (!n.busy) {
           n.y += n.speed * H * dt;
           n.rot += n.spin * dt;
-          if (n.y > H + 10) respawn(n, -size() * 1.1);
+          if (n.y > H + 10) {
+            if (n.v === 0) { removeZero(n); continue; } // the zero falls away instead of coming back
+            respawn(n, -size() * 1.1);
+          }
         }
         n.el.style.transform = `translate(${n.x}px, ${n.y}px) rotate(${n.rot}deg)`;
       }
