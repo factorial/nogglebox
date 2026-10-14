@@ -282,7 +282,11 @@
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       for (const n of nums) {
-        if (!n.busy) {
+        if (n.busy) {
+          // While tooting, it turns upright so it's easy to read (a 6 isn't mistaken for a 9).
+          n.rot = ((n.rot % 360) + 540) % 360 - 180;       // same angle, between -180 and 180
+          n.rot += (0 - n.rot) * Math.min(1, dt * 12);     // ease quickly to upright
+        } else {
           n.y += n.speed * H * dt;
           n.rot += n.spin * dt;
           if (n.y > H + 10) {

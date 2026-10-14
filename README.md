@@ -69,6 +69,14 @@ You can hand it a video straight from your phone or editor: it needs [ffmpeg](ht
 - **Volume:** evened out to the site's standard loudness, so no video is louder or quieter than the others.
 - **Streaming:** arranged so playback can start before the whole file has downloaded.
 
+If the video (or its music) needs credit, add it as a third argument, and it's shown small at the bottom of the page:
+
+```bash
+./new-page.sh "Sea Turtles" ~/Movies/turtles.mov "Video: NOAA"
+```
+
+Any page can have a credit: add `credit: "…"` to its entry in `pages.js`. Material under licenses like Creative Commons Attribution must be credited; public-domain sources (NASA, NOAA, the CDC…) ask for it too.
+
 It prints the final file size, and warns if it's near GitHub's 100 MB per-file limit. If you see that warning, trim the video. Short videos suit the audience better anyway.
 
 We want this app to be at least 50% videos. Videos should be relatively short. Example videos would be animations, musicals, interviews with children, puppets talking with adults. Think 70s Sesame Street content.
@@ -105,7 +113,6 @@ Want to contribute but not sure what to make? We'd love videos like these. Keep 
 - **Vowel faces** (`letters`): people saying the vowels and the different sounds they make, with close-ups on their funny faces as they do. For example, a man comes on screen and says "Ayyy!" to greet someone, with the letter **A** appearing beside his face. Then he takes a drink of water and goes "Ahhh," then sees something scary and goes "Aaaa!" Likewise, a woman comes on screen and says "Eeee!" in excitement, then "Ehhh"… and so on for every vowel.
 - **Washing hands** (`health`): children washing their hands, teaching how to wash hands.
 - **Kids' big ideas** (`feelings`, `community`): several interviews with children, asking them imaginative questions.
-- **Make a flip book** (`art`): a person teaching how to make a flip book.
 - **Hellos from around the world** (`languages`): people saying "Hello" in languages from around the world. This could also be an interactive.
 
 ---

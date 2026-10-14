@@ -40,6 +40,24 @@ Short notes on what we've learned while building Nogglebox, each with where it c
 - **Don't publish identifiable footage of young children without careful thought: online content is permanent and can be scraped.**
   - Observed (project decision, Oct 2026)
 
+## Free sources of content
+- **US federal agencies publish public-domain video; credit is requested, and third-party footage inside their videos isn't covered:** National Park Service b-roll (no implying NPS endorsement; the arrowhead logo isn't free), Fish & Wildlife Service's National Digital Library (animals), NOAA (ocean; Ocean Today).
+  - [NPS: San Antonio Missions b-roll](https://www.nps.gov/saan/learn/photosmultimedia/videos.htm)
+  - [NPS: Grand Canyon b-roll index](https://home.nps.gov/grca/learn/photosmultimedia/b-roll_hd_index.htm)
+  - [USFWS National Digital Library](https://digitalibra.omeka.net/items/show/57)
+  - [NOAA Ocean Today: about](https://oceantoday.noaa.gov/aboutsite.html)
+  - [NOAA Ocean Exploration media kit](https://oceanexplorer.noaa.gov/news/media-kit.html)
+- **Children's storybooks in many languages under CC BY 4.0 (with audio on Global Storybooks):** StoryWeaver (Pratham Books), Global Storybooks, African Storybook.
+  - [StoryWeaver blog](https://storyweaver.org.in/v0/blog_posts/487-this-children-s-day-storyweaver-and-pratham-education-foundation-renew-their-commitment-to-providing-free-storybooks-to-children)
+  - [Digital Public Goods: StoryWeaver](https://digitalpublicgoods.net/r/storyweaver)
+  - [UBC: Global Storybooks](https://open.ubc.ca/?p=6278)
+- **Musopen releases public-domain recordings of classical music** (asks for credit in derived works and not to sell the recordings).
+  - [EFF: Musopen](https://www.eff.org/deeplinks/2010/08/musopen-wants-give-classical-music-public-domain)
+- **ESA videos marked CC BY-SA 3.0 IGO need credit, a link to the license, and changed versions shared alike.**
+  - [ESA open access](https://open.esa.int/?p=2)
+- **Mixkit stock video: "Free License" items need no credit; "Restricted License" items are non-commercial only.**
+  - [Mixkit: official information](https://mixkit.co/llm-info/)
+
 ## Audio & video
 - **H.264 `.mp4` plays in every browser; HEVC (H.265), common from iPhones, doesn't.**
   - [MDN: Web video codec guide](https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Video_codecs)

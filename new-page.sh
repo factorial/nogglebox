@@ -2,11 +2,13 @@
 # Usage:
 #   ./new-page.sh "Page Title"                  interactive page: copies _template/ to pages/<next id>/
 #   ./new-page.sh "Page Title" path/to/clip.mp4  video page: puts the video in pages/<next id>/
+#   ./new-page.sh "Page Title" path/to/clip.mp4 "Video: NOAA"   …with a credit line shown on the page
 # Either way, the page is appended to pages.js.
 set -euo pipefail
 cd "$(dirname "$0")"
 title="${1:?Usage: ./new-page.sh \"Page Title\" [video.mp4]}"
 video="${2:-}"
+credit="${3:-}"
 
 mkdir -p pages
 last=$(cd pages && ls -d [0-9]*/ 2>/dev/null | tr -d / | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
@@ -61,7 +63,12 @@ if [ -n "$video" ]; then
   echo "  final size: ${mb} MB"
   (( mb > 90 )) && echo "  Warning: that's close to GitHub's 100 MB limit per file. Consider trimming the video." >&2
   js_name=$(printf '%s' "$name" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
-  entry="  { id: $id, title: \"$js_title\", video: \"$js_name\" },"
+  if [ -n "$credit" ]; then
+    js_credit=$(printf '%s' "$credit" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+    entry="  { id: $id, title: \"$js_title\", video: \"$js_name\", credit: \"$js_credit\" },"
+  else
+    entry="  { id: $id, title: \"$js_title\", video: \"$js_name\" },"
+  fi
 else
   cp -R _template/ "$dir/"
   esc_title=$(printf '%s' "$title" | sed -e 's/[&|\\]/\\&/g')

@@ -8,6 +8,10 @@
 // Video pages: { id: 6, title: "Bubbles", video: "bubbles.mp4" } plays pages/6/bubbles.mp4
 // full-screen with sound the moment the kid lands on it (no index.html needed).
 // Optional: fit: "cover" (fill the screen, cropping edges), loop: true.
+//
+// Any page can have a credit, shown small at the bottom of the screen; required when using
+// material that needs attribution (e.g. Creative Commons) and polite for public-domain sources:
+//   { id: 15, title: "Sea Turtles", video: "turtles.mp4", credit: "Video: NOAA" }
 // Add one with: ./new-page.sh "Bubbles" ~/Movies/bubbles.mp4
 window.PAGES = [
   { id: 1, title: "Falling Numbers", areas: ["math"] },
@@ -22,5 +26,5 @@ window.PAGES = [
   { id: 11, title: "Bus Stop", video: "bus.mp4", areas: ["community"] },
   { id: 12, title: "The Cork Puppet Sings the ABCs", video: "img-1650.mp4", areas: ["letters", "music"] },
   { id: 13, title: "Flip Book Dance", video: "flip-book-dance.mp4", areas: ["art"] },
-  { id: 14, title: "Zoo Trip", video: "zoo-trip.mp4", areas: ["science"] },
+  { id: 14, title: "Zoo Trip", video: "zoo-trip.mp4", areas: ["science"], credit: "Courtesy Zoo Atlanta" },
 ];

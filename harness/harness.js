@@ -147,6 +147,9 @@
     setHash(id);
     const page = PAGES[byId.get(id)];
     document.title = page.title + " · " + SITE.name;
+    const credit = document.getElementById("credit");
+    credit.textContent = page.credit || "";
+    credit.hidden = !page.credit;
     if (id === shownId && stage.firstElementChild) return;
     shownId = id;
     body.classList.remove("is-home");

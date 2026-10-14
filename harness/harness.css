@@ -79,6 +79,21 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action
 body.is-home #stage { visibility: hidden; }
 body:not(.is-home) #landing { display: none; }
 
+/* ---------- Credit line (for pages with a "credit" in pages.js) ---------- */
+/* Small and quiet, bottom center: the gap between the Back and Next buttons. */
+#credit {
+  position: absolute; z-index: 6;
+  left: calc(var(--btn) + var(--edge) * 2); right: calc(var(--btn) + var(--edge) * 2);
+  bottom: var(--edge);
+  text-align: center;
+  font-weight: 600; font-size: max(11px, 1.7vmin); line-height: 1.25;
+  color: rgba(255, 255, 255, .85);
+  text-shadow: 0 0 .3em rgba(0, 0, 0, .9), 0 0 .1em rgba(0, 0, 0, .9);
+  pointer-events: none;
+}
+#credit[hidden] { display: none; }
+body.is-home #credit { display: none; }
+
 /* ---------- Friendly error screen ---------- */
 #oops {
   position: absolute; inset: 0; z-index: 5;
