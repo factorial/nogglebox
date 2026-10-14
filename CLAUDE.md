@@ -11,7 +11,7 @@ Static site, no build step. Audience: pre-K kids, mostly on tablets. The site is
 ## Layout
 - `index.html` + `harness/` — the shell. Shows the landing page, or loads a sub-page in an iframe (`/#/<id>`). Handles Next/Back, slide transitions, and the friendly error screen.
 - `site.js` — the site's name (logo, tab titles, spoken greeting). Rename the site here, plus `manifest.webmanifest`.
-- `RESEARCH.md` — short lessons learned while building, each with its source (or "Observed"). Add to it when we learn something worth keeping.
+- `RESEARCH.md` — short lessons about content (kids and learning, licensing, sources, making audio and video), each with its source (or "Observed"). Add to it when we learn something worth keeping. Technical lessons (browser quirks, hosting) belong in code comments, not here.
 - `CURRICULUM.md` — subject areas, learning goals, page ideas, and coverage. Tag new pages with `areas` and update its coverage table.
 - `pages.js` — the page list (`{ id, title, areas }`). Its order doesn't affect navigation. IDs are permanent integers; never reuse one.
 - `pages/<id>/index.html` — one folder per page (e.g. `pages/1/`, `pages/2/`). Self-contained; put its assets (videos, images) in the same folder. Shared files are two levels up (`../../shared/`).
