@@ -11,6 +11,8 @@
   --white: #ffffff;
 
   --edge: max(12px, 2.2vmin);
+  /* Bottom spacing that also clears the home-indicator bar on devices without a home button */
+  --edge-bottom: max(var(--edge), env(safe-area-inset-bottom));
   --btn: clamp(60px, 12vmin, 120px);
   --font: "Baloo 2", "Arial Rounded MT Bold", "Comic Sans MS", system-ui, sans-serif;
 }
@@ -33,6 +35,15 @@ html, body {
   touch-action: none; /* no scrolling, no pinch or double-tap zoom */
 }
 body { position: fixed; inset: 0; height: 100dvh; }
+/* iOS Home Screen web apps with the "black-translucent" status bar draw from the very top of the
+   screen but report a height that leaves out the status bar, which left a strip of background
+   showing at the bottom. Add the status bar's height back there. (-webkit-touch-callout is
+   supported only by iOS/iPadOS browsers, so other systems' installed apps are unaffected.) */
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    body { height: calc(100dvh + env(safe-area-inset-top)); }
+  }
+}
 
 button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: none; }
 
@@ -84,7 +95,7 @@ body:not(.is-home) #landing { display: none; }
 #credit {
   position: absolute; z-index: 6;
   left: calc(var(--btn) + var(--edge) * 2); right: calc(var(--btn) + var(--edge) * 2);
-  bottom: var(--edge);
+  bottom: var(--edge-bottom);
   text-align: center;
   font-weight: 600; font-size: max(11px, 1.7vmin); line-height: 1.25;
   color: rgba(255, 255, 255, .85);
@@ -129,8 +140,8 @@ body.is-home #oops { display: none; }
 .nav-btn.bump { animation: bump 300ms ease; }
 @keyframes bump { 40% { transform: scale(0.82); } 100% { transform: scale(1); } }
 
-.back   { left:  var(--edge); bottom: var(--edge); background: var(--orange); }
-.next   { right: var(--edge); bottom: var(--edge); background: var(--green); }
+.back   { left:  var(--edge); bottom: var(--edge-bottom); background: var(--orange); }
+.next   { right: var(--edge); bottom: var(--edge-bottom); background: var(--green); }
 .next svg { transform: translateX(6%); }
 .back svg { transform: translateX(-6%); }
 

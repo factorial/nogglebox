@@ -126,6 +126,23 @@
       if (w.Kit && w.Kit.silence) w.Kit.silence();
       else w.document.querySelectorAll("video, audio").forEach((m) => m.pause());
     } catch (_) { /* page never loaded; nothing to stop */ }
+    if (frame.kitAudio) { frame.kitAudio.close().catch(() => {}); frame.kitAudio = null; }
+  }
+
+  // A Web Audio context created and started inside a tap, for the page about to load.
+  function startedAudio() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      const ac = new AC();
+      ac.resume().catch(() => {});
+      // Older Safari only truly starts once something plays, so play one silent sample.
+      const src = ac.createBufferSource();
+      src.buffer = ac.createBuffer(1, 1, ac.sampleRate);
+      src.connect(ac.destination);
+      src.start();
+      return ac;
+    } catch (_) { return null; }
   }
 
   function showHome() {
@@ -167,6 +184,10 @@
       frame.src = pageUrl(id);
       frame.title = page.title;
       frame.allow = "autoplay; fullscreen; microphone; camera";
+      // Give the page a sound engine started by this tap, so it can make sounds right away.
+      // On its own, a page's sound only unlocks when the kid's touch counts as a tap on the
+      // page itself, and iPads don't count a held press or a slide (most piano playing).
+      if (tapping) frame.kitAudio = startedAudio();
     }
     if (old.length && dir !== "none") frame.className += " from-" + dir;
     stage.appendChild(frame);
@@ -424,6 +445,7 @@
   // "click" (finger lifted), not pointerdown: browsers only count a touch as a user gesture
   // once it ends, and video sound / speech need a real gesture. touch-action: none
   // removes the old 300ms click delay, so this is still instant.
+  let tapping = false; // true while a nav tap is being handled
   function tap(el, fn) {
     let last = 0;
     el.addEventListener("click", (e) => {
@@ -433,7 +455,8 @@
       last = now;
       unlockVoice(); // first tap: warm up audio + speech so pages can talk later
       stopVoice();
-      fn();
+      tapping = true;
+      try { fn(); } finally { tapping = false; }
     });
   }
 

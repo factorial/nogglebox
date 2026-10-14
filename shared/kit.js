@@ -110,15 +110,23 @@
   let ctx = null;
   function audio() {
     if (!ctx) {
+      // Inside the shell, use the sound engine it started with the tap that opened this page,
+      // so sound works from the first touch.
+      try { ctx = (window.frameElement && window.frameElement.kitAudio) || null; } catch (_) {}
+      if (ctx && ctx.state === "closed") ctx = null;
+    }
+    if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ctx = new AC();
     }
-    if (ctx.state === "suspended") ctx.resume();
+    // "interrupted" is iOS's state after a phone call, Siri, or another app's audio.
+    if (ctx.state === "suspended" || ctx.state === "interrupted") ctx.resume().catch(() => {});
     return ctx;
   }
-  // iOS only lets audio start inside a touch; unlock on the first one.
-  ["pointerdown", "touchend", "keydown"].forEach((t) =>
+  // Otherwise (a page opened directly), browsers only let audio start inside a tap: keep
+  // trying on every touch until one counts.
+  ["pointerdown", "pointerup", "touchend", "click", "keydown"].forEach((t) =>
     window.addEventListener(t, () => audio(), { capture: true, passive: true })
   );
 
