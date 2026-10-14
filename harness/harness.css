@@ -25,7 +25,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--sky);
+  background: #000; /* any strip iOS leaves at the screen's edge shows this; black suits videos */
   color: var(--ink);
   font-family: var(--font);
   -webkit-user-select: none;
@@ -35,15 +35,6 @@ html, body {
   touch-action: none; /* no scrolling, no pinch or double-tap zoom */
 }
 body { position: fixed; inset: 0; height: 100dvh; }
-/* iOS Home Screen web apps with the "black-translucent" status bar draw from the very top of the
-   screen but report a height that leaves out the status bar, which left a strip of background
-   showing at the bottom. Add the status bar's height back there. (-webkit-touch-callout is
-   supported only by iOS/iPadOS browsers, so other systems' installed apps are unaffected.) */
-@media (display-mode: standalone) {
-  @supports (-webkit-touch-callout: none) {
-    body { height: calc(100dvh + env(safe-area-inset-top)); }
-  }
-}
 
 button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: none; }
 

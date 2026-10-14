@@ -84,6 +84,8 @@ Short notes on what we've learned while building Nogglebox, each with where it c
   - [Apple: Safari Web Content Guide, configuring your server for video](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/CreatingVideoforSafarioniPhone/CreatingVideoforSafarioniPhone.html)
 - **The browser's built-in speech is unreliable: Chrome's speech engine can hang for the whole browser session (only a restart fixes it). Prefer recorded audio.**
   - Observed (Oct 2026)
+- **iPad Home Screen web apps (iPadOS 26, added from Safari or Chrome) get the whole screen but report a viewport about 32pt too short (`innerHeight`, `100dvh`), and clip the page to it, leaving a strip at the bottom filled with the page's background color. Fix: when `navigator.standalone`, size both `<html>` and `<body>` to the screen's height in px, with `body` positioned absolutely; a `position: fixed` body stays clipped. Once sized, iOS reports the full height, so don't undo the fix when the gap reads 0 (it flickers), and re-check after startup, rotation and resume, since iOS settles its size late.**
+  - Observed (Oct 2026)
 - **Two CSS animations with the same name: the last one defined wins, silently breaking the other.**
   - [MDN: @keyframes](https://developer.mozilla.org/en-US/docs/Web/CSS/@keyframes)
 - **Emoji drawn by scaling up a small font look blurry; draw them at their real pixel size.**

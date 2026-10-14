@@ -445,6 +445,39 @@
   // "click" (finger lifted), not pointerdown: browsers only count a touch as a user gesture
   // once it ends, and video sound / speech need a real gesture. touch-action: none
   // removes the old 300ms click delay, so this is still instant.
+  // iOS/iPadOS Home Screen web apps give the page the whole screen but report a viewport about
+  // 32pt too short, and clip the page to it, leaving an empty strip at the bottom. There, size
+  // the root element and the shell to the screen itself, with the shell positioned absolutely
+  // (fixed elements stay clipped). Only a small gap is corrected, so split-screen layouts are
+  // left alone.
+  function fitScreen() {
+    if (!navigator.standalone) return; // iOS-only property: true in a Home Screen web app
+    const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+    const landscape = screen.orientation ? screen.orientation.type.startsWith("landscape")
+      : Math.abs(window.orientation || 0) === 90;
+    const want = landscape ? short : long, have = window.innerHeight;
+    const root = document.documentElement;
+    // A gap of 0 still counts: once sized, iOS reports the full height, and undoing it then
+    // would bring the gap back (it flickered). Only bigger differences (split screen) step aside.
+    if (want >= have && want - have <= 80) {
+      root.style.height = want + "px"; // the root element hides overflow, so it must be tall enough too
+      body.style.position = "absolute";
+      body.style.height = want + "px";
+    } else {
+      root.style.height = body.style.position = body.style.height = "";
+    }
+  }
+  // iOS settles on the app's viewport size some time after starting, and doesn't always report
+  // changes, so check again after anything that could change it, and a few times on startup.
+  const refit = () => { fitScreen(); [100, 500, 1500].forEach((ms) => setTimeout(fitScreen, ms)); };
+  refit();
+  addEventListener("load", refit);
+  addEventListener("pageshow", refit);
+  addEventListener("orientationchange", refit);
+  addEventListener("resize", fitScreen);
+  if (window.visualViewport) visualViewport.addEventListener("resize", fitScreen);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refit(); });
+
   let tapping = false; // true while a nav tap is being handled
   function tap(el, fn) {
     let last = 0;

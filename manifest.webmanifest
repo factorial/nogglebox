@@ -2,7 +2,7 @@
   "name": "NOGGLEBOX",
   "short_name": "NOGGLEBOX",
   "start_url": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "any",
   "background_color": "#4cc3ff",
   "theme_color": "#4cc3ff",
